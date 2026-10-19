@@ -5,7 +5,7 @@
       <div class="spinner-oem"></div>
       <div class="loading-text">
         <h4>Проверяем деталь {{ oemCode }} на {{ currentHost }}...</h4>
-        <p>Ищем в каталоге, переходим на страницу детали с привязкой к VIN, а затем получаем Vehicle Fitment с чистой страницы</p>
+        <p>Ищем деталь в каталоге и проверяем совместимость с автомобилем...</p>
       </div>
     </div>
 
@@ -27,9 +27,9 @@
             <span class="oem-code-tag">OEM: {{ result.oem }}</span>
           </div>
 
-          <!-- Главный вывод: содержимое div с классом pn-check-confirm-text -->
+          <!-- Результат проверки совместимости -->
           <div class="confirm-text-display">
-            <span class="confirm-text-label">Содержимое .pn-check-confirm-text:</span>
+            <span class="confirm-text-label">Результат проверки:</span>
             <div class="confirm-text-value">
               "{{ result.confirmText }}"
             </div>
@@ -50,59 +50,42 @@
         </div>
 
         <div v-if="result.categoryUrl" class="detail-row">
-          <span class="detail-label">Каталог авто (Шаг 1):</span>
+          <span class="detail-label">Каталог автомобиля:</span>
           <a :href="result.categoryUrl" target="_blank" rel="noopener noreferrer" class="link-external">
-            Открыть категорию авто на {{ currentHost }} ↗
+            Открыть каталог {{ result.brand || '' }} на {{ currentHost }} ↗
           </a>
         </div>
 
         <div v-if="result.partUrl" class="detail-row">
-          <span class="detail-label">Страница детали (с VIN):</span>
+          <span class="detail-label">Страница детали:</span>
           <a :href="result.partUrl" target="_blank" rel="noopener noreferrer" class="link-external">
-            Открыть страницу детали на {{ currentHost }} ↗
-          </a>
-        </div>
-
-        <div v-if="result.cleanPartUrl" class="detail-row clean-url-row">
-          <span class="detail-label">Чистая ссылка (без query):</span>
-          <a :href="result.cleanPartUrl" target="_blank" rel="noopener noreferrer" class="link-external clean-link">
-            {{ result.cleanPartUrl }} ↗
+            Открыть деталь на {{ currentHost }} ↗
           </a>
         </div>
       </div>
 
-      <!-- Секция Vehicle Fitment со страницы без query параметров -->
-      <div v-if="result.fitmentDiv || (result.fitmentVehicles && result.fitmentVehicles.length)" class="fitment-section">
+      <!-- Секция совместимых автомобилей -->
+      <div v-if="result.fitmentVehicles && result.fitmentVehicles.length" class="fitment-section">
         <div class="fitment-header">
           <div class="fitment-title-wrap">
             <span class="fitment-icon">📋</span>
             <div>
-              <h3 class="fitment-title">Список совместимости: li data-id="Vehicle Fitment"</h3>
+              <h3 class="fitment-title">Список совместимых автомобилей</h3>
               <p class="fitment-subtitle">
-                Извлечено из <code>&lt;div class="fit-vehicle-list"&gt;</code> на странице без query-параметров
+                Модели и комплектации, на которые устанавливается данная деталь
               </p>
             </div>
-          </div>
-
-          <div class="fitment-actions">
-            <button 
-              type="button" 
-              class="btn-toggle-fitment" 
-              @click="showFitmentRaw = !showFitmentRaw"
-            >
-              {{ showFitmentRaw ? '📊 Показать таблицу' : '📄 Показать HTML код div' }}
-            </button>
           </div>
         </div>
 
         <!-- Таблица совместимости -->
-        <div v-if="!showFitmentRaw" class="fitment-table-wrap">
-          <table v-if="result.fitmentVehicles && result.fitmentVehicles.length" class="fitment-table">
+        <div class="fitment-table-wrap">
+          <table class="fitment-table">
             <thead>
               <tr>
-                <th>Год, марка, модель (Year Make Model)</th>
-                <th>Комплектация и двигатель (Trim & Engine)</th>
-                <th>Опции автомобиля (Option Details)</th>
+                <th>Год, марка, модель</th>
+                <th>Комплектация и двигатель</th>
+                <th>Опции автомобиля</th>
               </tr>
             </thead>
             <tbody>
@@ -120,33 +103,7 @@
               </tr>
             </tbody>
           </table>
-
-          <div v-else class="fitment-empty">
-            Список совместимых автомобилей в таблице не найден
-          </div>
         </div>
-
-        <!-- Исходный HTML блока div Vehicle Fitment -->
-        <div v-else class="fitment-raw-wrap">
-          <div class="raw-fitment-bar">
-            <span>Исходный HTML блока &lt;div class="fit-vehicle-list"&gt;:</span>
-          </div>
-          <pre class="raw-fitment-html"><code>{{ result.fitmentDiv || result.fitmentLi }}</code></pre>
-        </div>
-      </div>
-
-      <!-- Переключатель просмотра оригинального HTML блока подтверждения -->
-      <div class="raw-toggle-wrap">
-        <button type="button" class="btn-toggle-raw" @click="showRaw = !showRaw">
-          {{ showRaw ? '▲ Скрыть исходный HTML-блок .pn-check-confirm-text' : '▼ Показать спарсенный HTML-блок (.pn-check-confirm-text)' }}
-        </button>
-
-        <transition name="fade">
-          <div v-if="showRaw" class="raw-code-box">
-            <div class="raw-box-title">Точный спарсенный HTML (.pn-check-confirm-text):</div>
-            <pre><code>{{ result.rawBlock || result.rawCheckBlock }}</code></pre>
-          </div>
-        </transition>
       </div>
     </div>
   </div>
@@ -178,10 +135,7 @@ export default {
     }
   },
   data() {
-    return {
-      showRaw: false,
-      showFitmentRaw: false
-    };
+    return {};
   },
   computed: {
     currentHost() {

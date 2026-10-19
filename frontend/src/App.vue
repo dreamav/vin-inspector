@@ -69,18 +69,18 @@
           v-if="demoNotice"
           type="info"
           title="Режим предпросмотра (Демо)"
-          message="Бэкенд-парсер каталога для данной марки пока в разработке, поэтому отображаются демонстрационные данные автомобиля."
+          message="Каталог деталей для данной марки подключается, отображаются демонстрационные данные автомобиля."
           @dismiss="demoNotice = false"
         />
 
         <!-- Loading State Skeleton -->
         <div v-if="loading" class="loading-state glass-panel">
           <div class="spinner-large"></div>
-          <h3>Идет парсинг данных с внешнего сайта...</h3>
+          <h3>Поиск автомобиля в каталоге запчастей...</h3>
           <p>
-            Отправляем VIN <span class="highlight-code">{{ currentVin }}</span>
-            <span v-if="currentOem"> и OEM <span class="highlight-code">{{ currentOem }}</span></span>, 
-            ждем ответ страницы каталога и извлекаем поля...
+            Проверяем VIN <span class="highlight-code">{{ currentVin }}</span>
+            <span v-if="currentOem"> и деталь <span class="highlight-code">{{ currentOem }}</span></span>, 
+            загружаем характеристики и подбираем каталог...
           </p>
         </div>
 
@@ -112,7 +112,7 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-      <p>VIN Inspector • Vue 2 + Vite • Разработано для быстрого парсинга автомобилей</p>
+      <p>VIN Inspector • Система поиска и проверки автозапчастей по VIN и OEM</p>
     </footer>
   </div>
 </template>

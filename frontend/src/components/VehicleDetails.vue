@@ -49,28 +49,8 @@
       </div>
     </div>
 
-    <!-- View Mode Tabs -->
-    <div class="view-tabs">
-      <button 
-        type="button" 
-        class="tab-btn" 
-        :class="{ active: currentTab === 'specs' }"
-        @click="currentTab = 'specs'"
-      >
-        📊 Характеристики
-      </button>
-      <button 
-        type="button" 
-        class="tab-btn" 
-        :class="{ active: currentTab === 'raw' }"
-        @click="currentTab = 'raw'"
-      >
-        📄 Исходные данные (JSON)
-      </button>
-    </div>
-
     <!-- Specs View -->
-    <div v-if="currentTab === 'specs'" class="specs-content">
+    <div class="specs-content">
       <!-- Section: Основные данные -->
       <div class="spec-section">
         <h3 class="section-title">
@@ -154,14 +134,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Raw Data View -->
-    <div v-else class="raw-content">
-      <div class="raw-header">
-        <span>Данные в формате JSON, полученные от парсера:</span>
-      </div>
-      <pre class="raw-json"><code>{{ formattedJson }}</code></pre>
-    </div>
   </div>
 </template>
 
@@ -176,14 +148,8 @@ export default {
   },
   data() {
     return {
-      currentTab: 'specs',
       copied: false
     };
-  },
-  computed: {
-    formattedJson() {
-      return JSON.stringify(this.vehicle, null, 2);
-    }
   },
   methods: {
     formatKey(key) {
