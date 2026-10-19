@@ -25,9 +25,17 @@ $vin = strtoupper(preg_replace('/\s+/', '', $vin));
 
 // Определяем целевой сайт из config файла по марке (или автоматически по VIN)
 $brandConfig = findBrandConfig($brandParam, '', $vin);
+if (!$brandConfig) {
+    echo json_encode([
+        'success' => false,
+        'error' => "Каталог запчастей для марки '{$brandParam}' пока не подключен"
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 $siteUrl = rtrim($brandConfig['siteUrl'], '/');
 $siteCode = $brandConfig['siteCode'];
 $brandName = $brandConfig['name'];
+
 
 // Шаг 1: Отправляем запрос на целевой сайт марки
 $redirectApiUrl = $siteUrl . "/api/url/vehicle-redirect";

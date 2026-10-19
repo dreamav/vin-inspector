@@ -246,7 +246,7 @@ export default {
           short: 'Lincoln Navigator', 
           label: '2012 Lincoln Navigator (5LMJJ2J54CEL07288)', 
           vin: '5LMJJ2J54CEL07288', 
-          oem: '7L1Z-19703-B',
+          oem: 'FL-820-S',
           icon: '👑'
         },
         { 
@@ -267,14 +267,14 @@ export default {
           short: 'BMW X5', 
           label: 'BMW X5 (5UXCR6C05M9B12345)', 
           vin: '5UXCR6C05M9B12345', 
-          oem: '',
+          oem: '11428575211',
           icon: '🔵'
         },
         { 
           short: 'Toyota Camry', 
           label: 'Toyota Camry (4T1B11HK5LU123456)', 
           vin: '4T1B11HK5LU123456', 
-          oem: '',
+          oem: '04152-YZZA1',
           icon: '🔴'
         }
       ]

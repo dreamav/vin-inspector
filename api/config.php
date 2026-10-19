@@ -68,17 +68,40 @@ function detectBrandByVin($vin) {
 }
 
 /**
- * Поиск конфигурации бренда по ID, названию, URL сайта или VIN
+ * Поиск конфигурации бренда по ID, названию, алиасам, URL сайта или VIN
  */
 function findBrandConfig($brandParam = '', $url = '', $vin = '') {
     $config = getBrandsConfig();
     $brands = $config['brands'];
 
-    // 1. Поиск по переданному ID бренда или названию
+    // 1. Поиск по переданному ID бренда, названию или алиасам
     if (!empty($brandParam)) {
         $brandParamLower = strtolower(trim($brandParam));
+        
+        // Точное совпадение с id или name
         foreach ($brands as $b) {
             if (strtolower($b['id']) === $brandParamLower || strtolower($b['name']) === $brandParamLower) {
+                return $b;
+            }
+        }
+
+        // Поиск по массиву aliases
+        foreach ($brands as $b) {
+            if (!empty($b['aliases']) && is_array($b['aliases'])) {
+                foreach ($b['aliases'] as $alias) {
+                    if (strtolower($alias) === $brandParamLower) {
+                        return $b;
+                    }
+                }
+            }
+        }
+
+        // Нестрогий поиск по подстроке (например 'mercedes' внутри 'mercedes-benz' или наоборот)
+        foreach ($brands as $b) {
+            $idLower = strtolower($b['id']);
+            $nameLower = strtolower($b['name']);
+            if (stripos($idLower, $brandParamLower) !== false || stripos($brandParamLower, $idLower) !== false ||
+                stripos($nameLower, $brandParamLower) !== false || stripos($brandParamLower, $nameLower) !== false) {
                 return $b;
             }
         }
@@ -109,6 +132,12 @@ function findBrandConfig($brandParam = '', $url = '', $vin = '') {
         }
     }
 
-    // По умолчанию возвращаем первый бренд (Infiniti)
-    return $brands[0];
+    // Если был запрошен конкретный бренд/URL/VIN, но ничего не найдено - возвращаем null
+    if (!empty($brandParam) || !empty($url) || !empty($vin)) {
+        return null;
+    }
+
+    // По умолчанию возвращаем первый бренд, только если все параметры пусты
+    return $brands[0] ?? null;
 }
+

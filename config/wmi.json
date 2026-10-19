@@ -1,279 +1,521 @@
 {
-  "description": "Справочник WMI (World Manufacturer Identifier) префиксов для определения марки автомобиля по первым 3 символам VIN",
-  "version": "1.0",
-  "brands": {
-    "infiniti": {
-      "id": "infiniti",
-      "name": "Infiniti",
-      "icon": "🏎️",
-      "supported": true,
-      "siteUrl": "https://www.infinitipartsdeal.com",
-      "siteCode": "IPD",
-      "wmi": ["3PC", "JNK", "JNR", "5N3", "SJN"]
-    },
-    "mercedes-benz": {
-      "id": "mercedes-benz",
-      "name": "Mercedes-Benz",
-      "icon": "⭐",
-      "supported": true,
-      "siteUrl": "https://www.mbpartsgiant.com",
-      "siteCode": "MBPG",
-      "wmi": [
-        "4JG", "55S", "WDB", "WDC", "WDD", "WDF", "WMX",
-        "W1K", "W1V", "W1Y", "W1Z", "WD3", "WD4", "2B1",
-        "8AB", "NMB", "VF9", "VAG"
-      ]
-    },
-    "lincoln": {
-      "id": "lincoln",
-      "name": "Lincoln",
-      "icon": "👑",
-      "supported": true,
-      "siteUrl": "https://www.fordpartsgiant.com",
-      "siteCode": "FPG",
-      "wmi": ["5LM", "1LN", "2LM", "3LN"]
-    },
-    "bmw": {
-      "id": "bmw",
-      "name": "BMW",
-      "icon": "🔵",
-      "supported": false,
-      "wmi": ["WBA", "WBS", "WBX", "WBW", "WBY", "4US", "5UX", "5YM", "3AV"]
-    },
-    "audi": {
-      "id": "audi",
-      "name": "Audi",
-      "icon": "🔘",
-      "supported": false,
-      "wmi": ["WAU", "WA1", "TRU"]
-    },
-    "volkswagen": {
-      "id": "volkswagen",
-      "name": "Volkswagen",
-      "icon": "🚗",
-      "supported": false,
-      "wmi": ["WVW", "WVG", "WV1", "WV2", "1VW", "3VW", "9BW"]
-    },
-    "porsche": {
-      "id": "porsche",
-      "name": "Porsche",
-      "icon": "🐎",
-      "supported": false,
-      "wmi": ["WP0", "WP1"]
-    },
-    "toyota": {
-      "id": "toyota",
-      "name": "Toyota",
-      "icon": "🔴",
-      "supported": false,
-      "wmi": [
-        "4T1", "4T3", "4T4", "5TD", "5TF", "2T1", "3TM",
-        "JT2", "JT3", "JTD", "JTE", "JTF", "JTG", "JTK",
-        "JTL", "JTM", "JTN", "SB1"
-      ]
-    },
-    "lexus": {
-      "id": "lexus",
-      "name": "Lexus",
-      "icon": "💎",
-      "supported": false,
-      "wmi": ["JT8", "JTH", "JTJ", "2T2", "58A"]
-    },
-    "nissan": {
-      "id": "nissan",
-      "name": "Nissan",
-      "icon": "🚙",
-      "supported": false,
-      "wmi": ["JN1", "JN6", "JN8", "1N4", "1N6", "3N1", "5N1", "5N2", "SJ1", "VNK"]
-    },
-    "honda": {
-      "id": "honda",
-      "name": "Honda",
-      "icon": "⚡",
-      "supported": false,
-      "wmi": ["1HG", "2HG", "3HG", "5FN", "5J6", "JHM", "JHL", "SHH"]
-    },
-    "acura": {
-      "id": "acura",
-      "name": "Acura",
-      "icon": "🅰️",
-      "supported": false,
-      "wmi": ["19U", "19V", "2HH", "5J8", "JH4"]
-    },
-    "ford": {
-      "id": "ford",
-      "name": "Ford",
-      "icon": "🚙",
-      "supported": false,
-      "wmi": ["1FA", "1FB", "1FC", "1FD", "1FM", "1FT", "2FA", "2FM", "2FT", "3FA", "WF0", "NM0"]
-    },
-    "chevrolet": {
-      "id": "chevrolet",
-      "name": "Chevrolet",
-      "icon": "🟡",
-      "supported": false,
-      "wmi": ["1G1", "1GC", "1GN", "2G1", "3GC", "KL1"]
-    },
-    "cadillac": {
-      "id": "cadillac",
-      "name": "Cadillac",
-      "icon": "🛡️",
-      "supported": false,
-      "wmi": ["1G6", "1GY"]
-    },
-    "hyundai": {
-      "id": "hyundai",
-      "name": "Hyundai",
-      "icon": "🚘",
-      "supported": false,
-      "wmi": ["KM8", "KMH", "KMF", "5NP", "5NM", "MAL"]
-    },
-    "kia": {
-      "id": "kia",
-      "name": "Kia",
-      "icon": "🚗",
-      "supported": false,
-      "wmi": ["KNA", "KND", "KNE", "5XX", "3KP"]
-    },
-    "mazda": {
-      "id": "mazda",
-      "name": "Mazda",
-      "icon": "🕊️",
-      "supported": false,
-      "wmi": ["JM1", "JM3", "JMZ", "1YV", "3MZ"]
-    },
-    "subaru": {
-      "id": "subaru",
-      "name": "Subaru",
-      "icon": "✨",
-      "supported": false,
-      "wmi": ["JF1", "JF2", "4S3", "4S4"]
-    },
-    "volvo": {
-      "id": "volvo",
-      "name": "Volvo",
-      "icon": "🇸🇪",
-      "supported": false,
-      "wmi": ["YV1", "YV4", "YV2"]
-    },
-    "land-rover": {
-      "id": "land-rover",
-      "name": "Land Rover",
-      "icon": "⛰️",
-      "supported": false,
-      "wmi": ["SAL"]
-    },
-    "jaguar": {
-      "id": "jaguar",
-      "name": "Jaguar",
-      "icon": "🐆",
-      "supported": false,
-      "wmi": ["SAJ"]
-    },
-    "mitsubishi": {
-      "id": "mitsubishi",
-      "name": "Mitsubishi",
-      "icon": "🔺",
-      "supported": false,
-      "wmi": ["JA3", "JA4", "4A3", "4A4", "MMA"]
-    },
-    "tesla": {
-      "id": "tesla",
-      "name": "Tesla",
-      "icon": "🔋",
-      "supported": false,
-      "wmi": ["5YJ", "7SA", "LRW", "XP7"]
-    },
-    "jeep": {
-      "id": "jeep",
-      "name": "Jeep",
-      "icon": "🚙",
-      "supported": false,
-      "wmi": ["1C4", "1J4"]
-    },
-    "dodge": {
-      "id": "dodge",
-      "name": "Dodge / RAM",
-      "icon": "🐏",
-      "supported": false,
-      "wmi": ["1B3", "1C3", "1C6", "2C3", "3C6"]
-    },
-    "peugeot": {
-      "id": "peugeot",
-      "name": "Peugeot",
-      "icon": "🦁",
-      "supported": false,
-      "wmi": ["VF3"]
-    },
-    "renault": {
-      "id": "renault",
-      "name": "Renault",
-      "icon": "🔷",
-      "supported": false,
-      "wmi": ["VF1"]
-    },
-    "skoda": {
-      "id": "skoda",
-      "name": "Skoda",
-      "icon": "🏹",
-      "supported": false,
-      "wmi": ["TMB", "TMP"]
-    },
-    "ferrari": {
-      "id": "ferrari",
-      "name": "Ferrari",
-      "icon": "🏎️",
-      "supported": false,
-      "wmi": ["ZFF"]
-    },
-    "lamborghini": {
-      "id": "lamborghini",
-      "name": "Lamborghini",
-      "icon": "🐂",
-      "supported": false,
-      "wmi": ["ZHW"]
-    },
-    "maserati": {
-      "id": "maserati",
-      "name": "Maserati",
-      "icon": "🔱",
-      "supported": false,
-      "wmi": ["ZAM"]
-    },
-    "bentley": {
-      "id": "bentley",
-      "name": "Bentley",
-      "icon": "🦅",
-      "supported": false,
-      "wmi": ["SCB"]
-    },
-    "rolls-royce": {
-      "id": "rolls-royce",
-      "name": "Rolls-Royce",
-      "icon": "👑",
-      "supported": false,
-      "wmi": ["SCA"]
-    },
-    "alfa-romeo": {
-      "id": "alfa-romeo",
-      "name": "Alfa Romeo",
-      "icon": "🐍",
-      "supported": false,
-      "wmi": ["ZAR"]
-    },
-    "fiat": {
-      "id": "fiat",
-      "name": "Fiat",
-      "icon": "🇮🇹",
-      "supported": false,
-      "wmi": ["ZFA", "ZFC", "3F3"]
-    },
-    "genesis": {
-      "id": "genesis",
-      "name": "Genesis",
-      "icon": "🪽",
-      "supported": false,
-      "wmi": ["KMU"]
+    "description": "Справочник WMI (World Manufacturer Identifier) префиксов для определения марки автомобиля по первым 3 символам VIN",
+    "version": "1.0",
+    "brands": {
+        "infiniti": {
+            "id": "infiniti",
+            "name": "Infiniti",
+            "icon": "🏎️",
+            "supported": true,
+            "siteUrl": "https://www.infinitipartsdeal.com",
+            "siteCode": "IPD",
+            "wmi": [
+                "3PC",
+                "JNK",
+                "JNR",
+                "5N3",
+                "SJN"
+            ]
+        },
+        "mercedes-benz": {
+            "id": "mercedes-benz",
+            "name": "Mercedes-Benz",
+            "icon": "⭐",
+            "supported": true,
+            "siteUrl": "https://www.mbpartsgiant.com",
+            "siteCode": "MBPG",
+            "wmi": [
+                "4JG",
+                "55S",
+                "WDB",
+                "WDC",
+                "WDD",
+                "WDF",
+                "WMX",
+                "W1K",
+                "W1V",
+                "W1Y",
+                "W1Z",
+                "WD3",
+                "WD4",
+                "2B1",
+                "8AB",
+                "NMB",
+                "VF9",
+                "VAG"
+            ]
+        },
+        "lincoln": {
+            "id": "lincoln",
+            "name": "Lincoln",
+            "icon": "👑",
+            "supported": true,
+            "siteUrl": "https://www.fordpartsgiant.com",
+            "siteCode": "FPG",
+            "wmi": [
+                "5LM",
+                "1LN",
+                "2LM",
+                "3LN"
+            ]
+        },
+        "bmw": {
+            "id": "bmw",
+            "name": "BMW",
+            "icon": "🔵",
+            "supported": true,
+            "wmi": [
+                "WBA",
+                "WBS",
+                "WBX",
+                "WBW",
+                "WBY",
+                "4US",
+                "5UX",
+                "5YM",
+                "3AV"
+            ],
+            "siteUrl": "https://www.bmwpartsdeal.com",
+            "siteCode": "BPD"
+        },
+        "audi": {
+            "id": "audi",
+            "name": "Audi",
+            "icon": "🔘",
+            "supported": true,
+            "wmi": [
+                "WAU",
+                "WA1",
+                "TRU"
+            ],
+            "siteUrl": "https://www.audipartsgiant.com",
+            "siteCode": "ADPG"
+        },
+        "volkswagen": {
+            "id": "volkswagen",
+            "name": "Volkswagen",
+            "icon": "🚗",
+            "supported": true,
+            "wmi": [
+                "WVW",
+                "WVG",
+                "WV1",
+                "WV2",
+                "1VW",
+                "3VW",
+                "9BW"
+            ],
+            "siteUrl": "https://www.vwpartsgiant.com",
+            "siteCode": "VWPG"
+        },
+        "porsche": {
+            "id": "porsche",
+            "name": "Porsche",
+            "icon": "🐎",
+            "supported": false,
+            "wmi": [
+                "WP0",
+                "WP1"
+            ]
+        },
+        "toyota": {
+            "id": "toyota",
+            "name": "Toyota",
+            "icon": "🔴",
+            "supported": true,
+            "wmi": [
+                "4T1",
+                "4T3",
+                "4T4",
+                "5TD",
+                "5TF",
+                "2T1",
+                "3TM",
+                "JT2",
+                "JT3",
+                "JTD",
+                "JTE",
+                "JTF",
+                "JTG",
+                "JTK",
+                "JTL",
+                "JTM",
+                "JTN",
+                "SB1"
+            ],
+            "siteUrl": "https://www.toyotapartsdeal.com",
+            "siteCode": "TPD"
+        },
+        "lexus": {
+            "id": "lexus",
+            "name": "Lexus",
+            "icon": "💎",
+            "supported": true,
+            "wmi": [
+                "JT8",
+                "JTH",
+                "JTJ",
+                "2T2",
+                "58A"
+            ],
+            "siteUrl": "https://www.lexuspartsnow.com",
+            "siteCode": "LPN"
+        },
+        "nissan": {
+            "id": "nissan",
+            "name": "Nissan",
+            "icon": "🚙",
+            "supported": true,
+            "wmi": [
+                "JN1",
+                "JN6",
+                "JN8",
+                "1N4",
+                "1N6",
+                "3N1",
+                "5N1",
+                "5N2",
+                "SJ1",
+                "VNK"
+            ],
+            "siteUrl": "https://www.nissanpartsdeal.com",
+            "siteCode": "NPD"
+        },
+        "honda": {
+            "id": "honda",
+            "name": "Honda",
+            "icon": "⚡",
+            "supported": true,
+            "wmi": [
+                "1HG",
+                "2HG",
+                "3HG",
+                "5FN",
+                "5J6",
+                "JHM",
+                "JHL",
+                "SHH"
+            ],
+            "siteUrl": "https://www.hondapartsnow.com",
+            "siteCode": "HPN"
+        },
+        "acura": {
+            "id": "acura",
+            "name": "Acura",
+            "icon": "🅰️",
+            "supported": true,
+            "wmi": [
+                "19U",
+                "19V",
+                "2HH",
+                "5J8",
+                "JH4"
+            ],
+            "siteUrl": "https://www.acurapartswarehouse.com",
+            "siteCode": "APW"
+        },
+        "ford": {
+            "id": "ford",
+            "name": "Ford",
+            "icon": "🚙",
+            "supported": true,
+            "wmi": [
+                "1FA",
+                "1FB",
+                "1FC",
+                "1FD",
+                "1FM",
+                "1FT",
+                "2FA",
+                "2FM",
+                "2FT",
+                "3FA",
+                "WF0",
+                "NM0"
+            ],
+            "siteUrl": "https://www.fordpartsgiant.com",
+            "siteCode": "FPG"
+        },
+        "chevrolet": {
+            "id": "chevrolet",
+            "name": "Chevrolet",
+            "icon": "🟡",
+            "supported": true,
+            "wmi": [
+                "1G1",
+                "1GC",
+                "1GN",
+                "2G1",
+                "3GC",
+                "KL1"
+            ],
+            "siteUrl": "https://www.gmpartsgiant.com",
+            "siteCode": "GPG"
+        },
+        "cadillac": {
+            "id": "cadillac",
+            "name": "Cadillac",
+            "icon": "🛡️",
+            "supported": true,
+            "wmi": [
+                "1G6",
+                "1GY"
+            ],
+            "siteUrl": "https://www.gmpartsgiant.com",
+            "siteCode": "GPG"
+        },
+        "hyundai": {
+            "id": "hyundai",
+            "name": "Hyundai",
+            "icon": "🚘",
+            "supported": true,
+            "wmi": [
+                "KM8",
+                "KMH",
+                "KMF",
+                "5NP",
+                "5NM",
+                "MAL"
+            ],
+            "siteUrl": "https://www.hyundaipartsdeal.com",
+            "siteCode": "HPD"
+        },
+        "kia": {
+            "id": "kia",
+            "name": "Kia",
+            "icon": "🚗",
+            "supported": true,
+            "wmi": [
+                "KNA",
+                "KND",
+                "KNE",
+                "5XX",
+                "3KP"
+            ],
+            "siteUrl": "https://www.kiapartsnow.com",
+            "siteCode": "KPN"
+        },
+        "mazda": {
+            "id": "mazda",
+            "name": "Mazda",
+            "icon": "🕊️",
+            "supported": true,
+            "wmi": [
+                "JM1",
+                "JM3",
+                "JMZ",
+                "1YV",
+                "3MZ"
+            ],
+            "siteUrl": "https://www.mazdapartsnow.com",
+            "siteCode": "MZPN"
+        },
+        "subaru": {
+            "id": "subaru",
+            "name": "Subaru",
+            "icon": "✨",
+            "supported": true,
+            "wmi": [
+                "JF1",
+                "JF2",
+                "4S3",
+                "4S4"
+            ],
+            "siteUrl": "https://www.subarupartsdeal.com",
+            "siteCode": "SPD"
+        },
+        "volvo": {
+            "id": "volvo",
+            "name": "Volvo",
+            "icon": "🇸🇪",
+            "supported": true,
+            "wmi": [
+                "YV1",
+                "YV4",
+                "YV2"
+            ],
+            "siteUrl": "https://www.volvopartsgiant.com",
+            "siteCode": "VPG"
+        },
+        "land-rover": {
+            "id": "land-rover",
+            "name": "Land Rover",
+            "icon": "⛰️",
+            "supported": false,
+            "wmi": [
+                "SAL"
+            ]
+        },
+        "jaguar": {
+            "id": "jaguar",
+            "name": "Jaguar",
+            "icon": "🐆",
+            "supported": false,
+            "wmi": [
+                "SAJ"
+            ]
+        },
+        "mitsubishi": {
+            "id": "mitsubishi",
+            "name": "Mitsubishi",
+            "icon": "🔺",
+            "supported": true,
+            "wmi": [
+                "JA3",
+                "JA4",
+                "4A3",
+                "4A4",
+                "MMA"
+            ],
+            "siteUrl": "https://www.mitsubishipartsgiant.com",
+            "siteCode": "MTPG"
+        },
+        "tesla": {
+            "id": "tesla",
+            "name": "Tesla",
+            "icon": "🔋",
+            "supported": false,
+            "wmi": [
+                "5YJ",
+                "7SA",
+                "LRW",
+                "XP7"
+            ]
+        },
+        "jeep": {
+            "id": "jeep",
+            "name": "Jeep",
+            "icon": "🚙",
+            "supported": true,
+            "wmi": [
+                "1C4",
+                "1J4"
+            ],
+            "siteUrl": "https://www.moparpartsgiant.com",
+            "siteCode": "MPG"
+        },
+        "dodge": {
+            "id": "dodge",
+            "name": "Dodge / RAM",
+            "icon": "🐏",
+            "supported": true,
+            "wmi": [
+                "1B3",
+                "1C3",
+                "1C6",
+                "2C3",
+                "3C6"
+            ],
+            "siteUrl": "https://www.moparpartsgiant.com",
+            "siteCode": "MPG"
+        },
+        "peugeot": {
+            "id": "peugeot",
+            "name": "Peugeot",
+            "icon": "🦁",
+            "supported": false,
+            "wmi": [
+                "VF3"
+            ]
+        },
+        "renault": {
+            "id": "renault",
+            "name": "Renault",
+            "icon": "🔷",
+            "supported": false,
+            "wmi": [
+                "VF1"
+            ]
+        },
+        "skoda": {
+            "id": "skoda",
+            "name": "Skoda",
+            "icon": "🏹",
+            "supported": false,
+            "wmi": [
+                "TMB",
+                "TMP"
+            ]
+        },
+        "ferrari": {
+            "id": "ferrari",
+            "name": "Ferrari",
+            "icon": "🏎️",
+            "supported": false,
+            "wmi": [
+                "ZFF"
+            ]
+        },
+        "lamborghini": {
+            "id": "lamborghini",
+            "name": "Lamborghini",
+            "icon": "🐂",
+            "supported": false,
+            "wmi": [
+                "ZHW"
+            ]
+        },
+        "maserati": {
+            "id": "maserati",
+            "name": "Maserati",
+            "icon": "🔱",
+            "supported": false,
+            "wmi": [
+                "ZAM"
+            ]
+        },
+        "bentley": {
+            "id": "bentley",
+            "name": "Bentley",
+            "icon": "🦅",
+            "supported": false,
+            "wmi": [
+                "SCB"
+            ]
+        },
+        "rolls-royce": {
+            "id": "rolls-royce",
+            "name": "Rolls-Royce",
+            "icon": "👑",
+            "supported": false,
+            "wmi": [
+                "SCA"
+            ]
+        },
+        "alfa-romeo": {
+            "id": "alfa-romeo",
+            "name": "Alfa Romeo",
+            "icon": "🐍",
+            "supported": true,
+            "wmi": [
+                "ZAR"
+            ],
+            "siteUrl": "https://www.moparpartsgiant.com",
+            "siteCode": "MPG"
+        },
+        "fiat": {
+            "id": "fiat",
+            "name": "Fiat",
+            "icon": "🇮🇹",
+            "supported": true,
+            "wmi": [
+                "ZFA",
+                "ZFC",
+                "3F3"
+            ],
+            "siteUrl": "https://www.moparpartsgiant.com",
+            "siteCode": "MPG"
+        },
+        "genesis": {
+            "id": "genesis",
+            "name": "Genesis",
+            "icon": "🪽",
+            "supported": true,
+            "wmi": [
+                "KMU"
+            ],
+            "siteUrl": "https://www.hyundaipartsdeal.com",
+            "siteCode": "HPD"
+        }
     }
-  }
 }

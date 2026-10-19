@@ -91,28 +91,13 @@ $engineStr = trim($engineStr);
 
 $carTitle = trim("{$year} {$make} {$model}");
 
-// Сопоставляем марку с известными каталогами запчастей
-$brandId = strtolower($make);
-$catalogSite = '';
-$catalogSiteCode = '';
-$catalogHost = '';
+// Сопоставляем марку с известными каталогами запчастей через единую конфигурацию
+$brandConfig = findBrandConfig($make, '', $vin);
+$brandId = $brandConfig ? $brandConfig['id'] : strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '', $make));
+$catalogSite = $brandConfig ? $brandConfig['siteUrl'] : '';
+$catalogSiteCode = $brandConfig ? $brandConfig['siteCode'] : '';
+$catalogHost = $brandConfig ? parse_url($brandConfig['siteUrl'], PHP_URL_HOST) : '';
 
-if (stripos($make, 'Infiniti') !== false) {
-    $brandId = 'infiniti';
-    $catalogSite = 'https://www.infinitipartsdeal.com';
-    $catalogSiteCode = 'IPD';
-    $catalogHost = 'infinitipartsdeal.com';
-} elseif (stripos($make, 'Mercedes') !== false) {
-    $brandId = 'mercedes-benz';
-    $catalogSite = 'https://www.mbpartsgiant.com';
-    $catalogSiteCode = 'MBPG';
-    $catalogHost = 'mbpartsgiant.com';
-} elseif (stripos($make, 'Lincoln') !== false || stripos($make, 'Ford') !== false) {
-    $brandId = stripos($make, 'Lincoln') !== false ? 'lincoln' : 'ford';
-    $catalogSite = 'https://www.fordpartsgiant.com';
-    $catalogSiteCode = 'FPG';
-    $catalogHost = 'fordpartsgiant.com';
-}
 
 echo json_encode([
     'success' => true,

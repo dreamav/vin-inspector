@@ -35,9 +35,17 @@ $vin = strtoupper(preg_replace('/\s+/', '', $vin));
 
 // Определяем бренд и сайт из конфигурации (по параметру бренда или переданному URL)
 $brandConfig = findBrandConfig($brandParam, $categoryUrl ?: $inputPartUrl);
+if (!$brandConfig) {
+    echo json_encode([
+        'success' => false,
+        'error' => "Каталог запчастей для марки '{$brandParam}' пока не подключен"
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 $siteUrl = rtrim($brandConfig['siteUrl'], '/');
 $siteCode = $brandConfig['siteCode'];
 $brandName = $brandConfig['name'];
+
 
 // Шаг 1: Получаем ссылку на деталь
 if (!empty($inputPartUrl)) {
