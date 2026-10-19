@@ -13,6 +13,16 @@
       </div>
 
       <div class="header-status">
+        <button 
+          type="button" 
+          class="btn-header-reset" 
+          @click="resetState"
+          title="Сбросить поиск и очистить данные без перезагрузки страницы"
+        >
+          <span class="reset-icon">↺</span>
+          <span class="reset-text">Сброс</span>
+        </button>
+
         <div class="status-indicator">
           <span class="status-dot active"></span>
           <span class="status-label">Интерфейс Vue 2 активен</span>
@@ -25,6 +35,7 @@
       <div class="content-left">
         <!-- VIN Search Box (Step 1 & Step 2) -->
         <VinSearch 
+          ref="vinSearch"
           :loading="loading" 
           :decoding="decoding"
           :decoded-vehicle="decodedVehicle"
@@ -461,6 +472,32 @@ export default {
       } catch (e) {
         // игнорируем переполнение quota
       }
+    },
+
+    resetState() {
+      this.currentVin = '';
+      this.currentOem = '';
+      this.decoding = false;
+      this.decodedVehicle = null;
+      this.loading = false;
+      this.oemLoading = false;
+      this.error = null;
+      this.demoNotice = false;
+      this.vehicleData = null;
+      this.oemResult = null;
+      if (this.$refs.vinSearch && typeof this.$refs.vinSearch.resetAll === 'function') {
+        this.$refs.vinSearch.resetAll();
+      }
+    },
+
+    onResetVin() {
+      this.currentVin = '';
+      this.currentOem = '';
+      this.decodedVehicle = null;
+      this.vehicleData = null;
+      this.oemResult = null;
+      this.error = null;
+      this.demoNotice = false;
     }
   }
 };
@@ -522,6 +559,51 @@ export default {
 .brand-subtitle {
   font-size: 0.8rem;
   color: var(--text-dim);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-header-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted, #94a3b8);
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.btn-header-reset:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+}
+
+.btn-header-reset:active {
+  transform: translateY(0);
+}
+
+.btn-header-reset .reset-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-header-reset:hover .reset-icon {
+  transform: rotate(-180deg);
 }
 
 .status-indicator {
