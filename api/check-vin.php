@@ -23,8 +23,8 @@ if (empty($vin)) {
 
 $vin = strtoupper(preg_replace('/\s+/', '', $vin));
 
-// Определяем целевой сайт из config файла по марке
-$brandConfig = findBrandConfig($brandParam);
+// Определяем целевой сайт из config файла по марке (или автоматически по VIN)
+$brandConfig = findBrandConfig($brandParam, '', $vin);
 $siteUrl = rtrim($brandConfig['siteUrl'], '/');
 $siteCode = $brandConfig['siteCode'];
 $brandName = $brandConfig['name'];

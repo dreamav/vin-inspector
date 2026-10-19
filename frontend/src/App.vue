@@ -29,6 +29,7 @@
           :vehicle="vehicleData"
           :oem-loading="oemLoading"
           :brands="brands"
+          :wmi-data="wmiData"
           :selected-brand="selectedBrand"
           @brand-change="onBrandChange"
           @search-vin="onSearchVin" 
@@ -123,6 +124,7 @@ export default {
   data() {
     return {
       brands: [],
+      wmiData: null,
       selectedBrand: null,
       currentVin: '',
       currentOem: '',
@@ -142,18 +144,55 @@ export default {
   methods: {
     async loadBrands() {
       try {
-        const res = await fetch('/api/get-brands.php');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.brands && data.brands.length) {
-            this.brands = data.brands;
-            if (!this.selectedBrand) {
-              this.selectedBrand = this.brands[0];
-            }
+        const [resBrands, resWmi] = await Promise.all([
+          fetch('/api/get-brands.php').catch(() => null),
+          fetch('/api/get-wmi.php').catch(() => null)
+        ]);
+
+        let catalogBrands = [];
+        let wmiBrandsObj = null;
+
+        if (resBrands && resBrands.ok) {
+          const data = await resBrands.json();
+          if (data.success && data.brands) {
+            catalogBrands = data.brands;
           }
         }
+
+        if (resWmi && resWmi.ok) {
+          const wmiJson = await resWmi.json();
+          if (wmiJson.success && wmiJson.data) {
+            this.wmiData = wmiJson.data;
+            wmiBrandsObj = wmiJson.data.brands;
+          }
+        }
+
+        // Объединяем поддерживаемые каталоги с глобальным списком WMI
+        const merged = catalogBrands.map(b => ({ ...b, supported: true }));
+        if (wmiBrandsObj) {
+          Object.keys(wmiBrandsObj).forEach(key => {
+            const wb = wmiBrandsObj[key];
+            const existing = merged.find(b => b.id.toLowerCase() === wb.id.toLowerCase());
+            if (existing) {
+              existing.wmi = wb.wmi;
+            } else {
+              merged.push({
+                id: wb.id,
+                name: wb.name,
+                icon: wb.icon,
+                wmi: wb.wmi,
+                supported: false
+              });
+            }
+          });
+        }
+
+        this.brands = merged;
+        if (!this.selectedBrand && this.brands.length) {
+          this.selectedBrand = this.brands[0];
+        }
       } catch (e) {
-        console.warn('Could not load brands from API', e);
+        console.warn('Could not load brands or WMI from API', e);
       }
     },
 
@@ -174,6 +213,17 @@ export default {
       this.error = null;
       this.oemResult = null;
       this.loading = true;
+
+      // Если для марки каталог еще не подключен вживую, используем демо-генератор
+      const targetBrand = this.brands.find(b => b.id === brandId);
+      if (targetBrand && targetBrand.supported === false) {
+        setTimeout(() => {
+          this.useMockData(vin);
+          this.demoNotice = true;
+          this.loading = false;
+        }, 400);
+        return;
+      }
 
       try {
         const response = await fetch(`/api/check-vin.php?vin=${encodeURIComponent(vin)}&brand=${encodeURIComponent(brandId)}`, {

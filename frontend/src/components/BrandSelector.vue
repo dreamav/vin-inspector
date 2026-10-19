@@ -7,13 +7,13 @@
       </label>
       <div class="quick-brand-chips" v-if="!disabled">
         <button
-          v-for="b in brands"
+          v-for="b in visibleChips"
           :key="b.id"
           type="button"
           class="chip-btn"
-          :class="{ active: currentBrand && currentBrand.id === b.id }"
+          :class="{ active: currentBrand && currentBrand.id === b.id, 'chip-wmi': b.supported === false }"
           @click="selectBrand(b)"
-          :title="'Проверять на ' + b.siteUrl"
+          :title="b.siteUrl ? 'Проверять на ' + b.siteUrl : 'Марка ' + b.name + ' (WMI)'"
         >
           <span class="chip-icon">{{ b.icon || '🚘' }}</span>
           <span>{{ b.name }}</span>
@@ -24,7 +24,7 @@
     <!-- Dropdown Trigger Box -->
     <div 
       class="selector-trigger glass-panel"
-      :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
+      :class="{ 'is-open': isOpen, 'is-disabled': disabled, 'is-wmi-detected': currentBrand && currentBrand.supported === false }"
       @click="toggleDropdown"
       tabindex="0"
       @keydown.esc="closeDropdown"
@@ -33,15 +33,24 @@
       <div class="selected-info">
         <span class="brand-icon">{{ (currentBrand && currentBrand.icon) || '🚘' }}</span>
         <div class="brand-text-block">
-          <strong class="brand-name">{{ (currentBrand && currentBrand.name) || 'Выберите марку' }}</strong>
+          <strong class="brand-name">
+            {{ (currentBrand && currentBrand.name) || 'Выберите марку' }}
+            <span v-if="currentBrand && currentBrand.supported === false" class="badge-auto-tag">WMI Автоопределение</span>
+          </strong>
           <span class="site-tag" v-if="currentBrand">
-            Сайт: <span class="site-host">{{ getHost(currentBrand.siteUrl) }}</span>
+            <template v-if="currentBrand.siteUrl">
+              Сайт проверки: <span class="site-host">{{ getHost(currentBrand.siteUrl) }}</span>
+            </template>
+            <template v-else>
+              <span class="status-wmi-note">Марка определена по VIN • Каталог парсинга в разработке</span>
+            </template>
           </span>
         </div>
       </div>
 
       <div class="trigger-actions">
-        <span class="site-badge" v-if="currentBrand">{{ currentBrand.siteCode }}</span>
+        <span class="site-badge" v-if="currentBrand && currentBrand.siteCode">{{ currentBrand.siteCode }}</span>
+        <span class="site-badge badge-wmi" v-else-if="currentBrand">WMI</span>
         <span class="chevron-icon">{{ isOpen ? '▲' : '▼' }}</span>
       </div>
     </div>
@@ -55,7 +64,7 @@
             ref="searchInput"
             type="text"
             v-model="searchQuery"
-            placeholder="Поиск марки (Mercedes, Infiniti...)"
+            placeholder="Поиск марки (BMW, Toyota, Mercedes, Audi...)"
             class="dropdown-search-input"
             @click.stop
             @keydown.esc="closeDropdown"
@@ -83,24 +92,29 @@
             <div class="option-main">
               <span class="option-icon">{{ b.icon || '🚘' }}</span>
               <div class="option-info">
-                <span class="option-name">{{ b.name }}</span>
-                <span class="option-url">{{ b.siteUrl }}</span>
+                <span class="option-name">
+                  {{ b.name }}
+                  <span v-if="b.supported" class="catalog-ready-tag">Парсинг активен</span>
+                </span>
+                <span class="option-url" v-if="b.siteUrl">{{ b.siteUrl }}</span>
+                <span class="option-wmi" v-else-if="b.wmi">WMI: {{ b.wmi.slice(0, 5).join(', ') }}{{ b.wmi.length > 5 ? '...' : '' }}</span>
               </div>
             </div>
 
             <div class="option-meta">
-              <span class="code-pill">{{ b.siteCode }}</span>
+              <span class="code-pill" v-if="b.siteCode">{{ b.siteCode }}</span>
+              <span class="code-pill pill-wmi" v-else>WMI</span>
               <span v-if="currentBrand && currentBrand.id === b.id" class="selected-check">✓</span>
             </div>
           </li>
 
           <li v-if="filteredBrands.length === 0" class="no-results">
-            Марка "{{ searchQuery }}" не найдена в конфигурации
+            Марка "{{ searchQuery }}" не найдена в справочнике
           </li>
         </ul>
 
         <div class="dropdown-footer">
-          <span>Сайты подгружаются из <code>config/brands.json</code></span>
+          <span>Справочник WMI из <code>config/wmi.json</code></span>
         </div>
       </div>
     </transition>
@@ -138,13 +152,23 @@ export default {
       }
       return this.value;
     },
+    visibleChips() {
+      // Поддерживаемые марки (Infiniti, Mercedes) всегда первыми
+      const supported = this.brands.filter(b => b.supported !== false);
+      // Если текущая выбранная марка не входит в поддерживаемые (например, BMW определена по VIN), показываем её тоже
+      if (this.currentBrand && !supported.some(b => b.id === this.currentBrand.id)) {
+        return [...supported, this.currentBrand];
+      }
+      return supported;
+    },
     filteredBrands() {
       if (!this.searchQuery) return this.brands;
       const q = this.searchQuery.toLowerCase().trim();
       return this.brands.filter(b => 
         b.name.toLowerCase().includes(q) || 
         b.id.toLowerCase().includes(q) ||
-        (b.siteUrl && b.siteUrl.toLowerCase().includes(q))
+        (b.siteUrl && b.siteUrl.toLowerCase().includes(q)) ||
+        (b.wmi && b.wmi.some(w => w.toLowerCase().includes(q)))
       );
     }
   },
@@ -508,5 +532,63 @@ export default {
 .dropdown-fade-enter, .dropdown-fade-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+/* WMI Styles */
+.badge-auto-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.status-wmi-note {
+  font-size: 0.75rem;
+  color: #a5b4fc;
+}
+
+.badge-wmi {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+.chip-wmi {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.catalog-ready-tag {
+  font-size: 0.65rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.4rem;
+  font-weight: 600;
+}
+
+.option-wmi {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+}
+
+.pill-wmi {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.selector-trigger.is-wmi-detected {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
 }
 </style>

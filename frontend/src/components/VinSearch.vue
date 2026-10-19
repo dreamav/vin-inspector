@@ -92,6 +92,22 @@
             ⚠️ {{ vinError }}
           </div>
 
+          <!-- Индикатор автоопределения марки по VIN (WMI) -->
+          <transition name="slide-fade">
+            <div v-if="autoDetectedBrand && !vehicle" class="auto-brand-pill">
+              <span class="pill-sparkle">✨</span>
+              <span class="pill-text">Автоопределение:</span>
+              <strong class="pill-brand-name">{{ autoDetectedBrand.icon }} {{ autoDetectedBrand.name }}</strong>
+              <span class="pill-wmi-badge">WMI: <code>{{ autoDetectedWmi }}</code></span>
+              <span v-if="autoDetectedBrand.supported !== false" class="pill-badge-ready">
+                ● Каталог подключен
+              </span>
+              <span v-else class="pill-badge-demo">
+                ● Марка определена (демо-каталог)
+              </span>
+            </div>
+          </transition>
+
           <!-- Плашка успешного определения авто -->
           <div v-if="vehicle" class="vehicle-identified-banner">
             <span class="check-icon">✓</span>
@@ -155,7 +171,9 @@
           :disabled="!isValidVin || loading"
         >
           <span v-if="loading" class="spinner"></span>
-          <span v-else>Найти на {{ siteHost }}</span>
+          <span v-else-if="chosenBrand && chosenBrand.siteUrl">Найти на {{ siteHost }}</span>
+          <span v-else-if="chosenBrand">Определить {{ chosenBrand.name }}</span>
+          <span v-else>Найти по VIN</span>
           <span v-if="!loading" class="arrow-icon">→</span>
         </button>
 
@@ -185,6 +203,7 @@ const DEFAULT_BRANDS = [
     siteUrl: 'https://www.infinitipartsdeal.com',
     siteCode: 'IPD',
     icon: '🏎️',
+    wmi: ['3PC', 'JNK', 'JNR', '5N3', 'SJN'],
     vinPlaceholder: 'Например: 3PCAJ5M34KF147171',
     oemPlaceholder: 'Например: 48430-5NB0A или 22401-1LA1C'
   },
@@ -194,6 +213,7 @@ const DEFAULT_BRANDS = [
     siteUrl: 'https://www.mbpartsgiant.com',
     siteCode: 'MBPG',
     icon: '⭐',
+    wmi: ['4JG', '55S', 'WDB', 'WDC', 'WDD', 'WDF', 'WMX', 'W1K', 'W1V', 'W1Y', 'W1Z', 'WD3', 'WD4'],
     vinPlaceholder: 'Например: 4JGDA5HB8GA646272',
     oemPlaceholder: 'Например: 2761800009 или 000989680511'
   }
@@ -221,6 +241,10 @@ export default {
       type: Array,
       default: () => []
     },
+    wmiData: {
+      type: Object,
+      default: null
+    },
     selectedBrand: {
       type: [Object, String],
       default: null
@@ -233,6 +257,8 @@ export default {
       vinError: null,
       oemError: null,
       chosenBrand: null,
+      autoDetectedBrand: null,
+      autoDetectedWmi: '',
       allPresets: [
         { 
           short: 'Infiniti QX50', 
@@ -243,12 +269,60 @@ export default {
           icon: '🏎️'
         },
         { 
-          short: 'Mercedes GLE350', 
-          label: '2016 Mercedes-Benz GLE350 (4JGDA5HB8GA646272)', 
+          short: 'Mercedes GLE', 
+          label: '2016 Mercedes GLE350 (4JGDA5HB8GA646272)', 
           vin: '4JGDA5HB8GA646272', 
           oem: '2761800009',
           brandId: 'mercedes-benz',
           icon: '⭐'
+        },
+        { 
+          short: 'Mercedes E-Class', 
+          label: '2019 Mercedes E200 (WDD2130421A123456)', 
+          vin: 'WDD2130421A123456', 
+          oem: '',
+          brandId: 'mercedes-benz',
+          icon: '⭐'
+        },
+        { 
+          short: 'BMW X5', 
+          label: 'BMW X5 (5UXCR6C05M9B12345)', 
+          vin: '5UXCR6C05M9B12345', 
+          oem: '',
+          brandId: 'bmw',
+          icon: '🔵'
+        },
+        { 
+          short: 'Audi A6', 
+          label: 'Audi A6 (WAUZZZF27LN123456)', 
+          vin: 'WAUZZZF27LN123456', 
+          oem: '',
+          brandId: 'audi',
+          icon: '🔘'
+        },
+        { 
+          short: 'Toyota Camry', 
+          label: 'Toyota Camry (4T1B11HK5LU123456)', 
+          vin: '4T1B11HK5LU123456', 
+          oem: '',
+          brandId: 'toyota',
+          icon: '🔴'
+        },
+        { 
+          short: 'Porsche Cayenne', 
+          label: 'Porsche Cayenne (WP1AA2AY5KDA12345)', 
+          vin: 'WP1AA2AY5KDA12345', 
+          oem: '',
+          brandId: 'porsche',
+          icon: '🐎'
+        },
+        { 
+          short: 'Tesla Model 3', 
+          label: 'Tesla Model 3 (5YJ3E1EB4LF123456)', 
+          vin: '5YJ3E1EB4LF123456', 
+          oem: '',
+          brandId: 'tesla',
+          icon: '🔋'
         }
       ]
     };
@@ -317,12 +391,57 @@ export default {
     },
     isValidOem() {
       return this.oemInput.trim().length >= 3;
+    },
+    wmiLookup() {
+      const map = {};
+      if (this.wmiData && this.wmiData.brands) {
+        Object.keys(this.wmiData.brands).forEach(key => {
+          const b = this.wmiData.brands[key];
+          if (b.wmi && Array.isArray(b.wmi)) {
+            b.wmi.forEach(code => {
+              map[code.toUpperCase()] = b;
+            });
+          }
+        });
+      }
+      if (this.brandsList && this.brandsList.length) {
+        this.brandsList.forEach(b => {
+          if (b.wmi && Array.isArray(b.wmi)) {
+            b.wmi.forEach(code => {
+              map[code.toUpperCase()] = b;
+            });
+          }
+        });
+      }
+      return map;
     }
   },
   methods: {
     handleBrandChange(brand) {
       this.chosenBrand = brand;
       this.$emit('brand-change', brand);
+    },
+    checkWmiDetection(val) {
+      if (!val || val.length < 3) {
+        this.autoDetectedBrand = null;
+        this.autoDetectedWmi = '';
+        return;
+      }
+      const prefix = val.substring(0, 3).toUpperCase();
+      const matched = this.wmiLookup[prefix];
+      if (matched) {
+        this.autoDetectedBrand = matched;
+        this.autoDetectedWmi = prefix;
+        // Находим полный объект марки в brandsList, если доступен
+        const fullBrand = this.brandsList.find(b => b.id.toLowerCase() === matched.id.toLowerCase()) || matched;
+        if (!this.chosenBrand || this.chosenBrand.id !== fullBrand.id) {
+          this.chosenBrand = fullBrand;
+          this.$emit('brand-change', fullBrand);
+        }
+      } else {
+        this.autoDetectedBrand = null;
+        this.autoDetectedWmi = '';
+      }
     },
     onVinInput(event) {
       let val = event.target.value.toUpperCase().replace(/\s+/g, '');
@@ -334,22 +453,25 @@ export default {
       }
 
       this.vinInput = val;
+      this.checkWmiDetection(val);
     },
     onOemInput(event) {
       this.oemInput = event.target.value.toUpperCase().trimStart();
       this.oemError = null;
     },
     selectPreset(item) {
-      if (item.brandId && this.brandsList) {
+      this.vinInput = item.vin;
+      this.oemInput = item.oem || '';
+      this.vinError = null;
+      this.checkWmiDetection(item.vin);
+      
+      if (item.brandId) {
         const found = this.brandsList.find(b => b.id === item.brandId);
         if (found) {
           this.chosenBrand = found;
           this.$emit('brand-change', found);
         }
       }
-      this.vinInput = item.vin;
-      this.oemInput = item.oem || '';
-      this.vinError = null;
       this.$emit('search-vin', {
         vin: this.vinInput,
         brand: (this.chosenBrand && this.chosenBrand.id) || item.brandId || 'infiniti'
@@ -358,6 +480,8 @@ export default {
     clearVinInput() {
       this.vinInput = '';
       this.vinError = null;
+      this.autoDetectedBrand = null;
+      this.autoDetectedWmi = '';
       this.$nextTick(() => {
         this.$refs.vinInput.focus();
       });
@@ -787,6 +911,65 @@ export default {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.auto-brand-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+  animation: fadeIn 0.25s ease;
+}
+
+.pill-sparkle {
+  font-size: 0.95rem;
+}
+
+.pill-text {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.pill-brand-name {
+  color: #ffffff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pill-wmi-badge {
+  color: #a5b4fc;
+  font-size: 0.75rem;
+}
+
+.pill-wmi-badge code {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  color: #c7d2fe;
+  font-family: var(--font-mono);
+}
+
+.pill-badge-ready {
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.pill-badge-demo {
+  color: #f59e0b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: auto;
 }
 
 @media (max-width: 768px) {

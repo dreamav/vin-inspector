@@ -35,9 +35,42 @@ function getBrandsConfig() {
 }
 
 /**
- * Поиск конфигурации бренда по ID, названию или URL сайта
+ * Загрузка WMI справочника марок
  */
-function findBrandConfig($brandParam = '', $url = '') {
+function getWmiConfig() {
+    $wmiFile = __DIR__ . '/../config/wmi.json';
+    if (file_exists($wmiFile)) {
+        $json = file_get_contents($wmiFile);
+        $data = json_decode($json, true);
+        if ($data && !empty($data['brands'])) {
+            return $data;
+        }
+    }
+    return ['brands' => []];
+}
+
+/**
+ * Определение марки по первым 3 символам VIN (WMI)
+ */
+function detectBrandByVin($vin) {
+    if (empty($vin) || strlen($vin) < 3) {
+        return null;
+    }
+    $wmi = strtoupper(substr(trim($vin), 0, 3));
+    $wmiConfig = getWmiConfig();
+    
+    foreach ($wmiConfig['brands'] as $brandId => $b) {
+        if (!empty($b['wmi']) && in_array($wmi, $b['wmi'], true)) {
+            return $b;
+        }
+    }
+    return null;
+}
+
+/**
+ * Поиск конфигурации бренда по ID, названию, URL сайта или VIN
+ */
+function findBrandConfig($brandParam = '', $url = '', $vin = '') {
     $config = getBrandsConfig();
     $brands = $config['brands'];
 
@@ -51,7 +84,19 @@ function findBrandConfig($brandParam = '', $url = '') {
         }
     }
 
-    // 2. Поиск по хосту в URL
+    // 2. Автоматическое определение марки по VIN-коду (WMI)
+    if (!empty($vin)) {
+        $detected = detectBrandByVin($vin);
+        if ($detected && !empty($detected['id'])) {
+            foreach ($brands as $b) {
+                if (strtolower($b['id']) === strtolower($detected['id'])) {
+                    return $b;
+                }
+            }
+        }
+    }
+
+    // 3. Поиск по хосту в URL
     if (!empty($url)) {
         $host = parse_url($url, PHP_URL_HOST);
         if ($host) {
