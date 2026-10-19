@@ -61,6 +61,8 @@
           :result="oemResult"
           :loading="oemLoading"
           :oem-code="currentOem"
+          :vehicle="vehicleData"
+          :catalog-host="(vehicleData && vehicleData.siteUrl ? getHost(vehicleData.siteUrl) : (decodedVehicle && decodedVehicle.catalogHost ? decodedVehicle.catalogHost : ''))"
         />
 
         <StatusAlert 
@@ -237,7 +239,7 @@ export default {
     async onSearchOem(payload) {
       const vin = payload.vin;
       const oem = payload.oem;
-      const brandId = payload.brand || (this.vehicleData && this.vehicleData.brandId) || (this.selectedBrand ? this.selectedBrand.id : 'infiniti');
+      const brandId = payload.brand || (this.vehicleData && this.vehicleData.brandId) || (this.decodedVehicle && this.decodedVehicle.brandId) || '';
 
       this.currentOem = oem;
       this.oemLoading = true;

@@ -4,7 +4,7 @@
     <div v-if="loading" class="result-loading">
       <div class="spinner-oem"></div>
       <div class="loading-text">
-        <h4>Проверяем деталь {{ oemCode }} на infinitipartsdeal.com...</h4>
+        <h4>Проверяем деталь {{ oemCode }} на {{ currentHost }}...</h4>
         <p>Ищем в каталоге, переходим на страницу детали с привязкой к VIN, а затем получаем Vehicle Fitment с чистой страницы</p>
       </div>
     </div>
@@ -52,14 +52,14 @@
         <div v-if="result.categoryUrl" class="detail-row">
           <span class="detail-label">Каталог авто (Шаг 1):</span>
           <a :href="result.categoryUrl" target="_blank" rel="noopener noreferrer" class="link-external">
-            Открыть категорию авто на infinitipartsdeal.com ↗
+            Открыть категорию авто на {{ currentHost }} ↗
           </a>
         </div>
 
         <div v-if="result.partUrl" class="detail-row">
           <span class="detail-label">Страница детали (с VIN):</span>
           <a :href="result.partUrl" target="_blank" rel="noopener noreferrer" class="link-external">
-            Открыть страницу детали с параметрами авто ↗
+            Открыть страницу детали на {{ currentHost }} ↗
           </a>
         </div>
 
@@ -167,6 +167,14 @@ export default {
     oemCode: {
       type: String,
       default: ''
+    },
+    vehicle: {
+      type: Object,
+      default: null
+    },
+    catalogHost: {
+      type: String,
+      default: ''
     }
   },
   data() {
@@ -176,6 +184,33 @@ export default {
     };
   },
   computed: {
+    currentHost() {
+      if (this.result) {
+        if (this.result.siteUrl) {
+          try {
+            return new URL(this.result.siteUrl).hostname;
+          } catch (e) {
+            return this.result.siteUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+          }
+        }
+        if (this.result.categoryUrl) {
+          try {
+            return new URL(this.result.categoryUrl).hostname;
+          } catch (e) {}
+        }
+      }
+      if (this.catalogHost) {
+        return this.catalogHost;
+      }
+      if (this.vehicle && this.vehicle.siteUrl) {
+        try {
+          return new URL(this.vehicle.siteUrl).hostname;
+        } catch (e) {
+          return this.vehicle.siteUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        }
+      }
+      return 'каталоге запчастей';
+    },
     statusClass() {
       if (!this.result) return '';
       return 'status-' + (this.result.status || 'unknown');
@@ -196,14 +231,15 @@ export default {
   },
   methods: {
     isCurrentVehicleMatch(item) {
-      if (!this.result || !this.result.vehicleInfo) return false;
-      const vInfo = this.result.vehicleInfo.toLowerCase();
+      const vInfo = (this.result && this.result.vehicleInfo ? this.result.vehicleInfo : (this.vehicle && this.vehicle.title ? this.vehicle.title : '')).toLowerCase();
+      if (!vInfo) return false;
       const ymm = (item.yearMakeModel || '').toLowerCase();
-      // Проверка совпадения марки/модели и года
-      if (vInfo.includes('qx50') && ymm.includes('qx50') && ymm.includes('2019')) {
-        return true;
-      }
-      return false;
+      
+      const words = vInfo.match(/[a-z0-9]{3,}/gi) || [];
+      if (!words.length) return false;
+      
+      const matches = words.filter(word => ymm.includes(word.toLowerCase()));
+      return matches.length >= Math.min(2, words.length);
     }
   }
 };
