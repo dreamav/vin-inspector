@@ -6,11 +6,14 @@
         <div>
           <h2>Проверка автомобиля и деталей</h2>
           <p class="subtitle">
-            <span v-if="!vehicle">Шаг 1: Выберите марку и введите VIN для определения авто</span>
+            <span v-if="!decodedVehicle && !vehicle">Шаг 1: Введите VIN для определения марки и характеристик</span>
+            <span v-else-if="decodedVehicle && !vehicle" class="step-ready-subtitle">Автомобиль определен. Перейдите к каталогу запчастей</span>
             <span v-else class="step2-subtitle">Шаг 2: Введите OEM-код запчасти для проверки совместимости</span>
           </p>
         </div>
       </div>
+
+      <!-- Кнопки быстрого выбора примеров -->
       <div v-if="!vehicle" class="presets">
         <span class="preset-label">Примеры:</span>
         <button 
@@ -29,56 +32,46 @@
 
     <form @submit.prevent="handleSubmit" class="search-form">
       <div class="fields-stack">
-        <!-- Блок 0: Выпадающий список с поиском марок машин -->
-        <div class="field-group brand-select-group">
-          <BrandSelector
-            :brands="brandsList"
-            :value="chosenBrand"
-            :disabled="loading || !!vehicle"
-            @change="handleBrandChange"
-          />
-        </div>
-
         <!-- Поле 1: VIN код (Шаг 1) -->
         <div class="field-group">
           <div class="field-label-row">
             <label for="vin-input" class="field-label">
-              <span class="label-badge" :class="{ 'badge-done': vehicle }">
-                {{ vehicle ? '✓' : '1' }}
+              <span class="label-badge" :class="{ 'badge-done': decodedVehicle || vehicle }">
+                {{ (decodedVehicle || vehicle) ? '✓' : '1' }}
               </span>
               <span>VIN-код автомобиля</span>
-              <span class="required-tag" v-if="!vehicle">Обязательно</span>
+              <span class="required-tag" v-if="!decodedVehicle && !vehicle">Обязательно</span>
             </label>
             <button 
-              v-if="vehicle" 
+              v-if="decodedVehicle || vehicle" 
               type="button" 
               class="btn-change-vin" 
-              @click="changeVin"
+              @click="resetAll"
               title="Ввести другой VIN"
             >
-              Сменить VIN / марку
+              Сменить VIN
             </button>
           </div>
 
-          <div class="input-wrapper" :class="{ 'has-error': vinError, 'is-locked': !!vehicle }">
+          <div class="input-wrapper" :class="{ 'has-error': vinError, 'is-locked': !!decodedVehicle || !!vehicle }">
             <input
               id="vin-input"
               ref="vinInput"
               type="text"
               v-model="vinInput"
               @input="onVinInput"
-              :placeholder="vinPlaceholder"
+              placeholder="Например: 5LMJJ2J54CEL07288 или 3PCAJ5M34KF147171"
               maxlength="17"
               autocomplete="off"
               spellcheck="false"
-              :disabled="loading || !!vehicle"
+              :disabled="loading || decoding || !!decodedVehicle || !!vehicle"
             />
             <div class="input-meta">
               <span class="char-count" :class="{ valid: vinInput.length === 17 }">
                 {{ vinInput.length }}/17
               </span>
               <button 
-                v-if="vinInput.length > 0 && !vehicle" 
+                v-if="vinInput.length > 0 && !decodedVehicle && !vehicle" 
                 type="button" 
                 class="clear-btn" 
                 @click="clearVinInput"
@@ -88,47 +81,59 @@
               </button>
             </div>
           </div>
+
           <div v-if="vinError" class="validation-warning">
             ⚠️ {{ vinError }}
           </div>
 
-          <!-- Индикатор автоопределения марки по VIN (WMI) -->
+          <!-- Отображение найденной машины просто текстом (через NHTSA API) -->
           <transition name="slide-fade">
-            <div v-if="autoDetectedBrand && !vehicle" class="auto-brand-pill">
-              <span class="pill-sparkle">✨</span>
-              <span class="pill-text">Автоопределение:</span>
-              <strong class="pill-brand-name">{{ autoDetectedBrand.icon }} {{ autoDetectedBrand.name }}</strong>
-              <span class="pill-wmi-badge">WMI: <code>{{ autoDetectedWmi }}</code></span>
-              <span v-if="autoDetectedBrand.supported !== false" class="pill-badge-ready">
-                ● Каталог подключен
-              </span>
-              <span v-else class="pill-badge-demo">
-                ● Марка определена (демо-каталог)
-              </span>
+            <div v-if="decodedVehicle && !vehicle" class="decoded-car-card">
+              <div class="decoded-header">
+                <span class="nhtsa-badge">✓ Определено по базе NHTSA</span>
+                <span class="decoded-vin-code">{{ decodedVehicle.vin }}</span>
+              </div>
+              
+              <div class="decoded-main-row">
+                <span class="decoded-car-icon">🚘</span>
+                <div class="decoded-car-info">
+                  <h3 class="decoded-car-title">{{ decodedVehicle.carTitle }}</h3>
+                  <div class="decoded-tags-list">
+                    <span class="tag-item" v-if="decodedVehicle.engine">⚙️ {{ decodedVehicle.engine }}</span>
+                    <span class="tag-item" v-if="decodedVehicle.driveType">🛞 {{ decodedVehicle.driveType }}</span>
+                    <span class="tag-item" v-if="decodedVehicle.bodyClass">🚙 {{ decodedVehicle.bodyClass }}</span>
+                    <span class="tag-item" v-if="decodedVehicle.plantCountry">📍 Завод: {{ decodedVehicle.plantCountry }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="decoded-footer" v-if="decodedVehicle.catalogHost">
+                <span>Целевой каталог запчастей: <strong>{{ decodedVehicle.catalogHost }}</strong></span>
+              </div>
             </div>
           </transition>
 
-          <!-- Плашка успешного определения авто -->
+          <!-- Плашка успешного определения авто в каталоге запчастей -->
           <div v-if="vehicle" class="vehicle-identified-banner">
             <span class="check-icon">✓</span>
             <div class="identified-info">
-              <span class="identified-label">Автомобиль успешно определен:</span>
+              <span class="identified-label">Каталог подключен:</span>
               <strong class="identified-title">{{ vehicle.title || (vehicle.make + ' ' + (vehicle.model || '')) }}</strong>
               <span class="site-tag-inline" v-if="vehicle.siteUrl">
-                (каталог: {{ getHost(vehicle.siteUrl) }})
+                ({{ getHost(vehicle.siteUrl) }})
               </span>
             </div>
           </div>
         </div>
 
-        <!-- Поле 2: OEM-код запчасти (Шаг 2 - ПОЯВЛЯЕТСЯ ТОЛЬКО ПОСЛЕ ОПРЕДЕЛЕНИЯ МАШИНЫ) -->
+        <!-- Поле 2: OEM-код запчасти (Шаг 2 - ПОЯВЛЯЕТСЯ ТОЛЬКО ПОСЛЕ ПОИСКА В КАТАЛОГЕ) -->
         <transition name="slide-fade">
           <div v-if="vehicle" class="field-group oem-group">
             <label for="oem-input" class="field-label">
               <span class="label-badge badge-active">2</span>
               <span>OEM-код запчасти</span>
-              <span class="badge-step2-tag">
-                Проверка на {{ (chosenBrand && chosenBrand.name) || 'каталоге' }} ({{ siteHost }})
+              <span class="badge-step2-tag" v-if="vehicle.siteUrl">
+                Каталог {{ getHost(vehicle.siteUrl) }}
               </span>
             </label>
             <div class="input-wrapper oem-wrapper" :class="{ 'has-error': oemError }">
@@ -138,7 +143,7 @@
                 type="text"
                 v-model="oemInput"
                 @input="onOemInput"
-                :placeholder="oemPlaceholder"
+                placeholder="Например: 7L1Z-19703-B, 48430-5NB0A или 2761800009"
                 autocomplete="off"
                 spellcheck="false"
                 :disabled="oemLoading"
@@ -163,21 +168,33 @@
       </div>
 
       <div class="form-actions">
-        <!-- Кнопка Шага 1: Определить авто -->
+        <!-- Кнопка 1: Определить авто (через NHTSA) -->
         <button 
-          v-if="!vehicle"
+          v-if="!decodedVehicle && !vehicle"
           type="submit" 
-          class="btn-primary submit-btn" 
-          :disabled="!isValidVin || loading"
+          class="btn-primary submit-btn btn-decode" 
+          :disabled="!isValidVin || decoding"
+        >
+          <span v-if="decoding" class="spinner"></span>
+          <span v-else>Определить авто</span>
+          <span v-if="!decoding" class="arrow-icon">🔍</span>
+        </button>
+
+        <!-- Кнопка 2: Найти на сайте каталога (активируется после распознавания NHTSA) -->
+        <button 
+          v-else-if="decodedVehicle && !vehicle"
+          type="button" 
+          class="btn-primary submit-btn btn-search-catalog" 
+          :disabled="loading"
+          @click="handleSearchCatalog"
         >
           <span v-if="loading" class="spinner"></span>
-          <span v-else-if="chosenBrand && chosenBrand.siteUrl">Найти на {{ siteHost }}</span>
-          <span v-else-if="chosenBrand">Определить {{ chosenBrand.name }}</span>
-          <span v-else>Найти по VIN</span>
+          <span v-else-if="decodedVehicle.catalogHost">Найти на {{ decodedVehicle.catalogHost }}</span>
+          <span v-else>Найти запчасти</span>
           <span v-if="!loading" class="arrow-icon">→</span>
         </button>
 
-        <!-- Кнопка Шага 2: Проверить OEM деталь -->
+        <!-- Кнопка 3: Проверить OEM деталь (Шаг 2) -->
         <button 
           v-else
           type="submit" 
@@ -194,40 +211,20 @@
 </template>
 
 <script>
-import BrandSelector from './BrandSelector.vue';
-
-const DEFAULT_BRANDS = [
-  {
-    id: 'infiniti',
-    name: 'Infiniti',
-    siteUrl: 'https://www.infinitipartsdeal.com',
-    siteCode: 'IPD',
-    icon: '🏎️',
-    wmi: ['3PC', 'JNK', 'JNR', '5N3', 'SJN'],
-    vinPlaceholder: 'Например: 3PCAJ5M34KF147171',
-    oemPlaceholder: 'Например: 48430-5NB0A или 22401-1LA1C'
-  },
-  {
-    id: 'mercedes-benz',
-    name: 'Mercedes-Benz',
-    siteUrl: 'https://www.mbpartsgiant.com',
-    siteCode: 'MBPG',
-    icon: '⭐',
-    wmi: ['4JG', '55S', 'WDB', 'WDC', 'WDD', 'WDF', 'WMX', 'W1K', 'W1V', 'W1Y', 'W1Z', 'WD3', 'WD4'],
-    vinPlaceholder: 'Например: 4JGDA5HB8GA646272',
-    oemPlaceholder: 'Например: 2761800009 или 000989680511'
-  }
-];
-
 export default {
   name: 'VinSearch',
-  components: {
-    BrandSelector
-  },
   props: {
     loading: {
       type: Boolean,
       default: false
+    },
+    decoding: {
+      type: Boolean,
+      default: false
+    },
+    decodedVehicle: {
+      type: Object,
+      default: null
     },
     vehicle: {
       type: Object,
@@ -236,18 +233,6 @@ export default {
     oemLoading: {
       type: Boolean,
       default: false
-    },
-    brands: {
-      type: Array,
-      default: () => []
-    },
-    wmiData: {
-      type: Object,
-      default: null
-    },
-    selectedBrand: {
-      type: [Object, String],
-      default: null
     }
   },
   data() {
@@ -256,16 +241,19 @@ export default {
       oemInput: '',
       vinError: null,
       oemError: null,
-      chosenBrand: null,
-      autoDetectedBrand: null,
-      autoDetectedWmi: '',
       allPresets: [
+        { 
+          short: 'Lincoln Navigator', 
+          label: '2012 Lincoln Navigator (5LMJJ2J54CEL07288)', 
+          vin: '5LMJJ2J54CEL07288', 
+          oem: '7L1Z-19703-B',
+          icon: '👑'
+        },
         { 
           short: 'Infiniti QX50', 
           label: '2019 Infiniti QX50 (3PCAJ5M34KF147171)', 
           vin: '3PCAJ5M34KF147171', 
           oem: '48430-5NB0A',
-          brandId: 'infiniti',
           icon: '🏎️'
         },
         { 
@@ -273,15 +261,6 @@ export default {
           label: '2016 Mercedes GLE350 (4JGDA5HB8GA646272)', 
           vin: '4JGDA5HB8GA646272', 
           oem: '2761800009',
-          brandId: 'mercedes-benz',
-          icon: '⭐'
-        },
-        { 
-          short: 'Mercedes E-Class', 
-          label: '2019 Mercedes E200 (WDD2130421A123456)', 
-          vin: 'WDD2130421A123456', 
-          oem: '',
-          brandId: 'mercedes-benz',
           icon: '⭐'
         },
         { 
@@ -289,59 +268,19 @@ export default {
           label: 'BMW X5 (5UXCR6C05M9B12345)', 
           vin: '5UXCR6C05M9B12345', 
           oem: '',
-          brandId: 'bmw',
           icon: '🔵'
-        },
-        { 
-          short: 'Audi A6', 
-          label: 'Audi A6 (WAUZZZF27LN123456)', 
-          vin: 'WAUZZZF27LN123456', 
-          oem: '',
-          brandId: 'audi',
-          icon: '🔘'
         },
         { 
           short: 'Toyota Camry', 
           label: 'Toyota Camry (4T1B11HK5LU123456)', 
           vin: '4T1B11HK5LU123456', 
           oem: '',
-          brandId: 'toyota',
           icon: '🔴'
-        },
-        { 
-          short: 'Porsche Cayenne', 
-          label: 'Porsche Cayenne (WP1AA2AY5KDA12345)', 
-          vin: 'WP1AA2AY5KDA12345', 
-          oem: '',
-          brandId: 'porsche',
-          icon: '🐎'
-        },
-        { 
-          short: 'Tesla Model 3', 
-          label: 'Tesla Model 3 (5YJ3E1EB4LF123456)', 
-          vin: '5YJ3E1EB4LF123456', 
-          oem: '',
-          brandId: 'tesla',
-          icon: '🔋'
         }
       ]
     };
   },
   watch: {
-    selectedBrand: {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) {
-          if (typeof newVal === 'string') {
-            this.chosenBrand = this.brandsList.find(b => b.id === newVal) || this.brandsList[0];
-          } else {
-            this.chosenBrand = newVal;
-          }
-        } else if (!this.chosenBrand && this.brandsList.length) {
-          this.chosenBrand = this.brandsList[0];
-        }
-      }
-    },
     vehicle(newVal) {
       if (newVal) {
         if (newVal.vin) {
@@ -349,10 +288,6 @@ export default {
         }
         if (newVal.oem) {
           this.oemInput = newVal.oem;
-        }
-        if (newVal.brandId && this.brandsList) {
-          const b = this.brandsList.find(x => x.id === newVal.brandId);
-          if (b) this.chosenBrand = b;
         }
         this.$nextTick(() => {
           if (this.$refs.oemInput) {
@@ -363,25 +298,6 @@ export default {
     }
   },
   computed: {
-    brandsList() {
-      return (this.brands && this.brands.length) ? this.brands : DEFAULT_BRANDS;
-    },
-    siteHost() {
-      if (!this.chosenBrand || !this.chosenBrand.siteUrl) return 'каталоге';
-      return this.getHost(this.chosenBrand.siteUrl);
-    },
-    vinPlaceholder() {
-      if (this.chosenBrand && this.chosenBrand.vinPlaceholder) {
-        return this.chosenBrand.vinPlaceholder;
-      }
-      return 'Например: 3PCAJ5M34KF147171 или 4JGDA5HB8GA646272';
-    },
-    oemPlaceholder() {
-      if (this.chosenBrand && this.chosenBrand.oemPlaceholder) {
-        return this.chosenBrand.oemPlaceholder;
-      }
-      return 'Например: 48430-5NB0A или 2761800009';
-    },
     activePresets() {
       return this.allPresets;
     },
@@ -391,58 +307,9 @@ export default {
     },
     isValidOem() {
       return this.oemInput.trim().length >= 3;
-    },
-    wmiLookup() {
-      const map = {};
-      if (this.wmiData && this.wmiData.brands) {
-        Object.keys(this.wmiData.brands).forEach(key => {
-          const b = this.wmiData.brands[key];
-          if (b.wmi && Array.isArray(b.wmi)) {
-            b.wmi.forEach(code => {
-              map[code.toUpperCase()] = b;
-            });
-          }
-        });
-      }
-      if (this.brandsList && this.brandsList.length) {
-        this.brandsList.forEach(b => {
-          if (b.wmi && Array.isArray(b.wmi)) {
-            b.wmi.forEach(code => {
-              map[code.toUpperCase()] = b;
-            });
-          }
-        });
-      }
-      return map;
     }
   },
   methods: {
-    handleBrandChange(brand) {
-      this.chosenBrand = brand;
-      this.$emit('brand-change', brand);
-    },
-    checkWmiDetection(val) {
-      if (!val || val.length < 3) {
-        this.autoDetectedBrand = null;
-        this.autoDetectedWmi = '';
-        return;
-      }
-      const prefix = val.substring(0, 3).toUpperCase();
-      const matched = this.wmiLookup[prefix];
-      if (matched) {
-        this.autoDetectedBrand = matched;
-        this.autoDetectedWmi = prefix;
-        // Находим полный объект марки в brandsList, если доступен
-        const fullBrand = this.brandsList.find(b => b.id.toLowerCase() === matched.id.toLowerCase()) || matched;
-        if (!this.chosenBrand || this.chosenBrand.id !== fullBrand.id) {
-          this.chosenBrand = fullBrand;
-          this.$emit('brand-change', fullBrand);
-        }
-      } else {
-        this.autoDetectedBrand = null;
-        this.autoDetectedWmi = '';
-      }
-    },
     onVinInput(event) {
       let val = event.target.value.toUpperCase().replace(/\s+/g, '');
       
@@ -453,7 +320,6 @@ export default {
       }
 
       this.vinInput = val;
-      this.checkWmiDetection(val);
     },
     onOemInput(event) {
       this.oemInput = event.target.value.toUpperCase().trimStart();
@@ -463,25 +329,11 @@ export default {
       this.vinInput = item.vin;
       this.oemInput = item.oem || '';
       this.vinError = null;
-      this.checkWmiDetection(item.vin);
-      
-      if (item.brandId) {
-        const found = this.brandsList.find(b => b.id === item.brandId);
-        if (found) {
-          this.chosenBrand = found;
-          this.$emit('brand-change', found);
-        }
-      }
-      this.$emit('search-vin', {
-        vin: this.vinInput,
-        brand: (this.chosenBrand && this.chosenBrand.id) || item.brandId || 'infiniti'
-      });
+      this.$emit('decode-vin', this.vinInput);
     },
     clearVinInput() {
       this.vinInput = '';
       this.vinError = null;
-      this.autoDetectedBrand = null;
-      this.autoDetectedWmi = '';
       this.$nextTick(() => {
         this.$refs.vinInput.focus();
       });
@@ -492,16 +344,21 @@ export default {
         this.$refs.oemInput.focus();
       });
     },
-    changeVin() {
+    resetAll() {
       this.$emit('reset-vin');
+      this.vinInput = '';
+      this.oemInput = '';
+      this.vinError = null;
+      this.oemError = null;
       this.$nextTick(() => {
-        this.$refs.vinInput.focus();
+        if (this.$refs.vinInput) {
+          this.$refs.vinInput.focus();
+        }
       });
     },
     handleSubmit() {
-      const brandId = (this.chosenBrand && this.chosenBrand.id) || 'infiniti';
-      if (!this.vehicle) {
-        // Шаг 1: Поиск авто по VIN
+      if (!this.decodedVehicle && !this.vehicle) {
+        // Шаг 1: Запрос к NHTSA для определения авто
         if (!this.isValidVin) {
           if (this.vinInput.length < 17) {
             this.vinError = `Длина VIN должна быть ровно 17 символов (введено ${this.vinInput.length})`;
@@ -509,10 +366,10 @@ export default {
           return;
         }
         this.vinError = null;
-        this.$emit('search-vin', {
-          vin: this.vinInput.trim().toUpperCase(),
-          brand: brandId
-        });
+        this.$emit('decode-vin', this.vinInput.trim().toUpperCase());
+      } else if (this.decodedVehicle && !this.vehicle) {
+        // Переход к поиску на сайте каталога
+        this.handleSearchCatalog();
       } else {
         // Шаг 2: Проверка OEM детали
         if (!this.isValidOem) {
@@ -523,9 +380,18 @@ export default {
         this.$emit('search-oem', {
           vin: this.vinInput.trim().toUpperCase(),
           oem: this.oemInput.trim().toUpperCase(),
-          brand: brandId
+          brand: (this.vehicle && this.vehicle.brandId) || (this.decodedVehicle && this.decodedVehicle.brandId) || ''
         });
       }
+    },
+    handleSearchCatalog() {
+      if (!this.decodedVehicle) return;
+      this.$emit('search-catalog', {
+        vin: this.vinInput.trim().toUpperCase(),
+        brandId: this.decodedVehicle.brandId,
+        catalogSite: this.decodedVehicle.catalogSite,
+        catalogSiteCode: this.decodedVehicle.catalogSiteCode
+      });
     },
     getHost(url) {
       if (!url) return '';
@@ -582,6 +448,11 @@ export default {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: 0.2rem;
+}
+
+.step-ready-subtitle {
+  color: #38bdf8;
+  font-weight: 600;
 }
 
 .step2-subtitle {
@@ -643,10 +514,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-}
-
-.brand-select-group {
-  margin-bottom: 0.25rem;
 }
 
 .field-label-row {
@@ -810,6 +677,101 @@ export default {
   color: var(--text-main);
 }
 
+/* Карточка найденной машины просто текстом (NHTSA) */
+.decoded-car-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 1.1rem 1.25rem;
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  animation: fadeIn 0.25s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.decoded-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+}
+
+.nhtsa-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+}
+
+.decoded-vin-code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+.decoded-main-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.decoded-car-icon {
+  font-size: 2rem;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.4rem;
+  border-radius: 10px;
+}
+
+.decoded-car-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.decoded-car-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.decoded-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-item {
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+}
+
+.decoded-footer {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  padding-top: 0.5rem;
+}
+
+.decoded-footer strong {
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+}
+
+/* Баннер каталога деталей */
 .vehicle-identified-banner {
   display: flex;
   align-items: center;
@@ -866,16 +828,21 @@ export default {
 }
 
 .submit-btn {
-  min-width: 200px;
+  min-width: 220px;
+}
+
+.btn-decode {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+}
+
+.btn-search-catalog {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
 .btn-oem-submit {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-}
-
-.btn-oem-submit:hover:not(:disabled) {
-  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
 }
 
 .arrow-icon {
@@ -911,65 +878,6 @@ export default {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-.auto-brand-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 0.55rem 0.9rem;
-  border-radius: var(--radius-sm);
-  margin-top: 0.45rem;
-  font-size: 0.85rem;
-  flex-wrap: wrap;
-  animation: fadeIn 0.25s ease;
-}
-
-.pill-sparkle {
-  font-size: 0.95rem;
-}
-
-.pill-text {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.pill-brand-name {
-  color: #ffffff;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.pill-wmi-badge {
-  color: #a5b4fc;
-  font-size: 0.75rem;
-}
-
-.pill-wmi-badge code {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  color: #c7d2fe;
-  font-family: var(--font-mono);
-}
-
-.pill-badge-ready {
-  color: #34d399;
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-left: auto;
-}
-
-.pill-badge-demo {
-  color: #f59e0b;
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-left: auto;
 }
 
 @media (max-width: 768px) {

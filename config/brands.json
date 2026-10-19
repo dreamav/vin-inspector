@@ -25,6 +25,32 @@
       "exampleVin": "4JGDA5HB8GA646272",
       "exampleOem": "2761800009",
       "exampleCar": "2016 Mercedes-Benz GLE350"
+    },
+    {
+      "id": "lincoln",
+      "name": "Lincoln",
+      "siteUrl": "https://www.fordpartsgiant.com",
+      "siteCode": "FPG",
+      "searchPlaceholder": "Search by Part Number, Part Name, or Vehicle",
+      "vinPlaceholder": "Например: 5LMJJ2J54CEL07288",
+      "oemPlaceholder": "Например: 7L1Z-19703-B",
+      "icon": "👑",
+      "exampleVin": "5LMJJ2J54CEL07288",
+      "exampleOem": "7L1Z-19703-B",
+      "exampleCar": "2012 Lincoln Navigator"
+    },
+    {
+      "id": "ford",
+      "name": "Ford",
+      "siteUrl": "https://www.fordpartsgiant.com",
+      "siteCode": "FPG",
+      "searchPlaceholder": "Search by Part Number, Part Name, or Vehicle",
+      "vinPlaceholder": "Например: 1FTFW1ED4MFA12345",
+      "oemPlaceholder": "Например: FL-820-S",
+      "icon": "🚙",
+      "exampleVin": "1FTFW1ED4MFA12345",
+      "exampleOem": "FL-820-S",
+      "exampleCar": "2021 Ford F-150"
     }
   ]
 }

@@ -24,6 +24,15 @@
         "8AB", "NMB", "VF9", "VAG"
       ]
     },
+    "lincoln": {
+      "id": "lincoln",
+      "name": "Lincoln",
+      "icon": "👑",
+      "supported": true,
+      "siteUrl": "https://www.fordpartsgiant.com",
+      "siteCode": "FPG",
+      "wmi": ["5LM", "1LN", "2LM", "3LN"]
+    },
     "bmw": {
       "id": "bmw",
       "name": "BMW",

@@ -26,13 +26,12 @@
         <!-- VIN Search Box (Step 1 & Step 2) -->
         <VinSearch 
           :loading="loading" 
+          :decoding="decoding"
+          :decoded-vehicle="decodedVehicle"
           :vehicle="vehicleData"
           :oem-loading="oemLoading"
-          :brands="brands"
-          :wmi-data="wmiData"
-          :selected-brand="selectedBrand"
-          @brand-change="onBrandChange"
-          @search-vin="onSearchVin" 
+          @decode-vin="onDecodeVin"
+          @search-catalog="onSearchCatalog"
           @search-oem="onSearchOem"
           @reset-vin="onResetVin"
         />
@@ -57,7 +56,7 @@
           v-if="demoNotice"
           type="info"
           title="Режим предпросмотра (Демо)"
-          message="Бэкенд-парсер пока не подключен, поэтому отображаются демонстрационные данные автомобиля."
+          message="Бэкенд-парсер каталога для данной марки пока в разработке, поэтому отображаются демонстрационные данные автомобиля."
           @dismiss="demoNotice = false"
         />
 
@@ -82,7 +81,7 @@
         <div v-else class="welcome-box glass-panel">
           <div class="welcome-icon">🚘</div>
           <h2>Готов к работе</h2>
-          <p>Выберите марку (Mercedes-Benz или Infiniti), введите VIN-код или выберите готовый пример для быстрой проверки.</p>
+          <p>Введите VIN-код автомобиля для мгновенного определения марки через государственную базу NHTSA и перехода к каталогу деталей.</p>
         </div>
       </div>
 
@@ -124,10 +123,10 @@ export default {
   data() {
     return {
       brands: [],
-      wmiData: null,
-      selectedBrand: null,
       currentVin: '',
       currentOem: '',
+      decoding: false,
+      decodedVehicle: null,
       loading: false,
       oemLoading: false,
       error: null,
@@ -144,86 +143,54 @@ export default {
   methods: {
     async loadBrands() {
       try {
-        const [resBrands, resWmi] = await Promise.all([
-          fetch('/api/get-brands.php').catch(() => null),
-          fetch('/api/get-wmi.php').catch(() => null)
-        ]);
-
-        let catalogBrands = [];
-        let wmiBrandsObj = null;
-
-        if (resBrands && resBrands.ok) {
-          const data = await resBrands.json();
+        const res = await fetch('/api/get-brands.php');
+        if (res.ok) {
+          const data = await res.json();
           if (data.success && data.brands) {
-            catalogBrands = data.brands;
+            this.brands = data.brands;
           }
-        }
-
-        if (resWmi && resWmi.ok) {
-          const wmiJson = await resWmi.json();
-          if (wmiJson.success && wmiJson.data) {
-            this.wmiData = wmiJson.data;
-            wmiBrandsObj = wmiJson.data.brands;
-          }
-        }
-
-        // Объединяем поддерживаемые каталоги с глобальным списком WMI
-        const merged = catalogBrands.map(b => ({ ...b, supported: true }));
-        if (wmiBrandsObj) {
-          Object.keys(wmiBrandsObj).forEach(key => {
-            const wb = wmiBrandsObj[key];
-            const existing = merged.find(b => b.id.toLowerCase() === wb.id.toLowerCase());
-            if (existing) {
-              existing.wmi = wb.wmi;
-            } else {
-              merged.push({
-                id: wb.id,
-                name: wb.name,
-                icon: wb.icon,
-                wmi: wb.wmi,
-                supported: false
-              });
-            }
-          });
-        }
-
-        this.brands = merged;
-        if (!this.selectedBrand && this.brands.length) {
-          this.selectedBrand = this.brands[0];
         }
       } catch (e) {
-        console.warn('Could not load brands or WMI from API', e);
+        console.warn('Could not load brands from API', e);
       }
     },
 
-    onBrandChange(brand) {
-      this.selectedBrand = brand;
-      // Если уже было выбрано авто другой марки, очищаем карточку
-      if (this.vehicleData && this.vehicleData.brandId && this.vehicleData.brandId !== brand.id) {
-        this.onResetVin();
-      }
-    },
-
-    async onSearchVin(payload) {
-      const vin = typeof payload === 'string' ? payload : payload.vin;
-      const brandId = (typeof payload === 'object' && payload.brand) ? payload.brand : (this.selectedBrand ? this.selectedBrand.id : 'infiniti');
-
+    async onDecodeVin(vin) {
       this.currentVin = vin;
       this.currentOem = '';
       this.error = null;
       this.oemResult = null;
-      this.loading = true;
+      this.vehicleData = null;
+      this.decodedVehicle = null;
+      this.decoding = true;
+      this.demoNotice = false;
 
-      // Если для марки каталог еще не подключен вживую, используем демо-генератор
-      const targetBrand = this.brands.find(b => b.id === brandId);
-      if (targetBrand && targetBrand.supported === false) {
-        setTimeout(() => {
-          this.useMockData(vin);
-          this.demoNotice = true;
-          this.loading = false;
-        }, 400);
-        return;
+      try {
+        const res = await fetch(`/api/decode-vin.php?vin=${encodeURIComponent(vin)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            this.decodedVehicle = data;
+          } else {
+            this.error = data.error || 'Автомобиль не найден в базе NHTSA';
+          }
+        } else {
+          this.error = `Сервер ответил ошибкой HTTP ${res.status}`;
+        }
+      } catch (err) {
+        this.error = 'Не удалось связаться с сервисом NHTSA: ' + err.message;
+      } finally {
+        this.decoding = false;
       }
+    },
+
+    async onSearchCatalog(payload) {
+      const vin = (payload && payload.vin) || this.currentVin;
+      const brandId = (payload && payload.brandId) || (this.decodedVehicle && this.decodedVehicle.brandId) || '';
+
+      this.loading = true;
+      this.error = null;
+      this.oemResult = null;
 
       try {
         const response = await fetch(`/api/check-vin.php?vin=${encodeURIComponent(vin)}&brand=${encodeURIComponent(brandId)}`, {
@@ -234,26 +201,23 @@ export default {
           const result = await response.json();
           if (result.success && result.data) {
             this.vehicleData = result.data;
-            if (result.data.brandId && this.brands.length) {
-              const matched = this.brands.find(b => b.id === result.data.brandId);
-              if (matched) this.selectedBrand = matched;
-            }
             this.saveToHistory(this.vehicleData);
             this.demoNotice = false;
             return;
           } else {
-            this.error = result.error || 'Данные по данному VIN не найдены на сайте';
-            this.vehicleData = null;
-            this.demoNotice = false;
-            return;
+            // Если каталог пока не настроен для этой марки (например, BMW или Toyota)
+            if (this.decodedVehicle && !this.decodedVehicle.hasCatalog) {
+              this.useMockData(vin);
+              this.demoNotice = true;
+              return;
+            }
+            this.error = result.error || 'Данные по данному VIN не найдены в каталоге деталей';
           }
         } else {
           this.error = `Сервер бэкенда ответил ошибкой HTTP ${response.status}`;
-          this.vehicleData = null;
         }
       } catch (err) {
         this.error = 'Не удалось связаться с сервером бэкенда: ' + err.message;
-        this.vehicleData = null;
       } finally {
         this.loading = false;
       }
@@ -450,13 +414,24 @@ export default {
       this.currentVin = item.vin;
       this.currentOem = item.oem || '';
       this.vehicleData = item.data;
-      if (item.data && item.data.brandId && this.brands.length) {
-        const found = this.brands.find(b => b.id === item.data.brandId);
-        if (found) this.selectedBrand = found;
-      }
+      this.decodedVehicle = {
+        vin: item.vin,
+        carTitle: (item.data && item.data.title) || item.title,
+        catalogHost: (item.data && item.data.siteUrl) ? this.getHost(item.data.siteUrl) : ''
+      };
       this.oemResult = (item.data && item.data.oemResult) ? item.data.oemResult : null;
       this.error = null;
       this.demoNotice = false;
+    },
+
+    getHost(url) {
+      if (!url) return '';
+      try {
+        const u = new URL(url);
+        return u.hostname;
+      } catch (e) {
+        return url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      }
     },
 
     removeFromHistory(vin) {
