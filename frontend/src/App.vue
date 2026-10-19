@@ -22,11 +22,6 @@
           <span class="reset-icon">↺</span>
           <span class="reset-text">Сброс</span>
         </button>
-
-        <div class="status-indicator">
-          <span class="status-dot active"></span>
-          <span class="status-label">Интерфейс Vue 2 активен</span>
-        </div>
       </div>
     </header>
 
@@ -606,30 +601,6 @@ export default {
 
 .btn-header-reset:hover .reset-icon {
   transform: rotate(-180deg);
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  box-shadow: 0 0 8px #10b981;
-}
-
-.status-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #10b981;
 }
 
 /* Layout */
