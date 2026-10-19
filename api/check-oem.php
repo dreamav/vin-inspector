@@ -16,6 +16,8 @@ $categoryUrl = trim($_GET['categoryUrl'] ?? $_POST['categoryUrl'] ?? '');
 $inputPartUrl = trim($_GET['partUrl'] ?? $_POST['partUrl'] ?? '');
 $brandParam = trim($_GET['brand'] ?? $_POST['brand'] ?? '');
 
+$selectedOption = trim($_GET['option'] ?? $_POST['option'] ?? $_GET['filter'] ?? $_POST['filter'] ?? '');
+
 if (empty($oem) && !empty($inputPartUrl)) {
     if (preg_match('/~([a-zA-Z0-9-]+)\.html/i', $inputPartUrl, $oemMatch)) {
         $oem = $oemMatch[1];
@@ -34,7 +36,7 @@ $oem = strtoupper(preg_replace('/\s+/', '', $oem));
 $vin = strtoupper(preg_replace('/\s+/', '', $vin));
 
 // Определяем бренд и сайт из конфигурации (по параметру бренда или переданному URL)
-$brandConfig = findBrandConfig($brandParam, $categoryUrl ?: $inputPartUrl);
+$brandConfig = findBrandConfig($brandParam, $categoryUrl ?: $inputPartUrl, $vin);
 if (!$brandConfig) {
     echo json_encode([
         'success' => false,
@@ -54,6 +56,21 @@ if (!empty($inputPartUrl)) {
     if (empty($vin) && !empty($parsedInput['query'])) {
         parse_str($parsedInput['query'], $q);
         if (!empty($q['vin'])) $vin = strtoupper($q['vin']);
+    }
+    if (!empty($selectedOption)) {
+        parse_str($parsedInput['query'] ?? '', $q);
+        $currFilter = trim($q['filter'] ?? '', '() ');
+        if (!empty($currFilter)) {
+            if (strpos($currFilter, $selectedOption) === false) {
+                $q['filter'] = '(' . $selectedOption . ';' . $currFilter . ')';
+            } else {
+                $q['filter'] = '(' . $currFilter . ')';
+            }
+        } else {
+            $q['filter'] = '(' . $selectedOption . ')';
+        }
+        $cleanPath = explode('?', $inputPartUrl)[0];
+        $fullPartUrl = $cleanPath . '?' . http_build_query($q);
     }
 } else {
     // Ищем деталь через внутренний API каталога марки
@@ -103,6 +120,19 @@ if (!empty($inputPartUrl)) {
 
     if (!empty($vin)) {
         $queryArgs['vin'] = $vin;
+    }
+
+    if (!empty($selectedOption)) {
+        $existingFilter = trim($queryArgs['filter'] ?? '', '() ');
+        if (!empty($existingFilter)) {
+            if (strpos($existingFilter, $selectedOption) === false) {
+                $queryArgs['filter'] = '(' . $selectedOption . ';' . $existingFilter . ')';
+            } else {
+                $queryArgs['filter'] = '(' . $existingFilter . ')';
+            }
+        } else {
+            $queryArgs['filter'] = '(' . $selectedOption . ')';
+        }
     }
 
     $queryString = http_build_query($queryArgs);
@@ -166,6 +196,75 @@ if (preg_match('/<div[^>]*class=["\'][^"\']*pn-check-vehicle-info[^"\']*["\'][^>
 // Поиск названия детали из h1
 if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $partHtml, $h1Match)) {
     $partTitle = trim(preg_replace('/\s+/', ' ', strip_tags($h1Match[1])));
+}
+
+// Шаг 4.1: Извлекаем decodeVehicleInfo со страницы детали
+$decodeVehicleInfo = null;
+$pos = strpos($partHtml, '"decodeVehicleInfo":');
+if ($pos !== false) {
+    $start = $pos + strlen('"decodeVehicleInfo":');
+    $depth = 0;
+    $end = $start;
+    $len = strlen($partHtml);
+    for ($i = $start; $i < $len; $i++) {
+        if ($partHtml[$i] === '{') {
+            $depth++;
+        } elseif ($partHtml[$i] === '}') {
+            $depth--;
+            if ($depth === 0) {
+                $end = $i;
+                break;
+            }
+        }
+    }
+    $rawObj = substr($partHtml, $start, $end - $start + 1);
+    $cleanObj = preg_replace('/:\s*undefined\b/', ':null', $rawObj);
+    $decodeVehicleInfo = json_decode($cleanObj, true);
+    if ($decodeVehicleInfo) {
+        if (empty($decodeVehicleInfo['make']) && !empty($decodeVehicleInfo['currentMake'])) {
+            $decodeVehicleInfo['make'] = $decodeVehicleInfo['currentMake'];
+        }
+        if (empty($decodeVehicleInfo['model']) && !empty($decodeVehicleInfo['currentModel'])) {
+            $decodeVehicleInfo['model'] = $decodeVehicleInfo['currentModel'];
+        }
+        if (empty($decodeVehicleInfo['year']) && !empty($decodeVehicleInfo['currentYear'])) {
+            $decodeVehicleInfo['year'] = (int)$decodeVehicleInfo['currentYear'];
+        }
+    }
+}
+
+// Шаг 4.2: Если статус partial (требуется уточнение), запрашиваем список опций через API каталога
+$optionsList = [];
+$needsOptions = false;
+if ($status === 'partial') {
+    $needsOptions = true;
+    if ($decodeVehicleInfo) {
+        $optCh = curl_init($siteUrl . "/api/option/option-list");
+        curl_setopt_array($optCh, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($decodeVehicleInfo),
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_ENCODING => '',
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json, text/plain, */*',
+                'Origin: ' . $siteUrl,
+                'Referer: ' . $fullPartUrl,
+                'Site: ' . $siteCode,
+                'X-Site: ' . $siteCode
+            ]
+        ]);
+        $optRes = curl_exec($optCh);
+        curl_close($optCh);
+
+        $optData = json_decode($optRes, true);
+        if ($optData && !empty($optData['data']['optionList'])) {
+            $optionsList = $optData['data']['optionList'];
+        }
+    }
 }
 
 // Шаг 5: Убираем параметры строки запроса (query parameters) из сохраненной ссылки на деталь
@@ -241,6 +340,10 @@ echo json_encode([
     'siteUrl' => $siteUrl,
     'confirmText' => $confirmText ?: 'Результат проверки не найден',
     'status' => $status,
+    'needsOptions' => $needsOptions,
+    'options' => $optionsList,
+    'selectedOption' => $selectedOption,
+    'decodeVehicleInfo' => $decodeVehicleInfo,
     'partTitle' => $partTitle,
     'vehicleInfo' => $vehicleInfo,
     'categoryUrl' => $categoryUrl ?: "{$siteUrl}/page_product/category?vin=" . $vin,

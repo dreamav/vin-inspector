@@ -34,7 +34,36 @@
               "{{ result.confirmText }}"
             </div>
           </div>
+
+          <!-- Отображение выбранной опции автомобиля (если уже была уточнена) -->
+          <div v-if="result.selectedOption" class="selected-option-row">
+            <span class="selected-option-badge">
+              <span class="option-check-icon">✓</span>
+              Учтена опция: <strong>{{ activeOptionLabel }}</strong>
+            </span>
+            <button v-if="hasOptions" type="button" class="btn-change-option" @click="openModal" title="Выбрать другую комплектацию">
+              (изменить)
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- Баннер при необходимости выбора опций автомобиля -->
+      <div v-if="hasOptions && result.status === 'partial'" class="options-alert-banner">
+        <div class="options-alert-left">
+          <div class="options-alert-icon">⚙️</div>
+          <div class="options-alert-text">
+            <h4>Требуется уточнить комплектацию автомобиля</h4>
+            <p>
+              Данная деталь подходит не на все модификации. Выберите установленные опции (Select Vehicle Options), чтобы получить подтверждение совместимости.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="btn-select-options" @click="openModal">
+          <span class="btn-icon">⚙️</span>
+          <span class="btn-text">Выбрать опции автомобиля</span>
+          <span class="btn-subtext">(Select Vehicle Options)</span>
+        </button>
       </div>
 
       <!-- Дополнительная информация о детали и авто -->
@@ -106,6 +135,85 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно выбора опций автомобиля (Select Vehicle Options Popup) -->
+    <transition name="modal-fade">
+      <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
+        <div class="modal-card glass-panel" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <div class="modal-title-wrap">
+              <h3 class="modal-title">Уточнение комплектации автомобиля</h3>
+              <span class="modal-subtitle">Select Vehicle Options • {{ result.brand || '' }}</span>
+            </div>
+            <button type="button" class="modal-close-btn" @click="closeModal" title="Закрыть">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="modal-vehicle-badge" v-if="vehicleInfoText">
+              <span class="badge-icon">🚘</span>
+              <div class="badge-content">
+                <div class="badge-title">{{ vehicleInfoText }}</div>
+                <div class="badge-subtitle" v-if="result.oem">
+                  Деталь: <span class="badge-oem">{{ result.oem }}</span>
+                  <span v-if="result.partTitle"> • {{ result.partTitle }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-instruction">
+              Выберите параметры модификации, установленные на автомобиле, и нажмите <strong>Check Fit</strong>:
+            </div>
+
+            <!-- Списки опций по группам -->
+            <div 
+              v-for="(group, gIdx) in displayOptions" 
+              :key="gIdx" 
+              class="option-group-box"
+            >
+              <div class="group-title-row">
+                <span class="group-name">{{ group.title || 'Параметры комплектации' }}</span>
+                <span v-if="group.typeCode" class="group-code-tag">{{ group.typeCode }}</span>
+              </div>
+
+              <div class="options-grid">
+                <div
+                  v-for="(item, iIdx) in group.optionItemList"
+                  :key="iIdx"
+                  class="option-pill-card"
+                  :class="{ active: selectedOptions[group.title] === item.code }"
+                  @click="selectOption(group.title, item.code)"
+                >
+                  <div class="custom-radio">
+                    <div class="radio-dot" v-if="selectedOptions[group.title] === item.code"></div>
+                  </div>
+                  <div class="option-details">
+                    <span class="option-title">{{ item.text }}</span>
+                    <span v-if="item.extraCode" class="option-code-pill">{{ item.extraCode }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-modal-cancel" @click="closeModal">
+              Отмена
+            </button>
+            <button 
+              type="button" 
+              class="btn-modal-submit" 
+              :disabled="!isOptionSelected || loading"
+              @click="handleCheckFit"
+            >
+              <span v-if="loading" class="spinner-small"></span>
+              <span v-else>Проверить совместимость</span>
+              <span class="btn-subtext">(Check Fit)</span>
+              <span v-if="!loading" class="btn-arrow">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -135,9 +243,73 @@ export default {
     }
   },
   data() {
-    return {};
+    return {
+      showModal: false,
+      selectedOptions: {},
+      cachedOptions: []
+    };
+  },
+  watch: {
+    result: {
+      immediate: true,
+      handler(newVal) {
+        if (newVal) {
+          if (newVal.options && newVal.options.length) {
+            this.cachedOptions = newVal.options;
+          }
+          const groups = this.displayOptions;
+          if (groups && groups.length) {
+            const nextSelected = { ...this.selectedOptions };
+            groups.forEach(g => {
+              if (newVal.selectedOption) {
+                const match = (g.optionItemList || []).find(it => it.code === newVal.selectedOption || newVal.selectedOption.includes(it.code));
+                if (match) {
+                  nextSelected[g.title] = match.code;
+                  return;
+                }
+              }
+              if (!nextSelected[g.title]) {
+                if (g.selectValue) nextSelected[g.title] = g.selectValue;
+                else if (g.defaultValue) nextSelected[g.title] = g.defaultValue;
+                else if (g.optionItemList && g.optionItemList.length === 1) nextSelected[g.title] = g.optionItemList[0].code;
+              }
+            });
+            this.selectedOptions = nextSelected;
+          }
+        }
+      }
+    }
   },
   computed: {
+    displayOptions() {
+      if (this.result && this.result.options && this.result.options.length) {
+        return this.result.options;
+      }
+      return this.cachedOptions || [];
+    },
+    hasOptions() {
+      return this.displayOptions && this.displayOptions.length > 0;
+    },
+    isOptionSelected() {
+      if (!this.displayOptions.length) return false;
+      return this.displayOptions.every(g => !!this.selectedOptions[g.title]);
+    },
+    activeOptionLabel() {
+      if (!this.result || !this.result.selectedOption) return '';
+      const code = this.result.selectedOption;
+      for (const g of this.displayOptions) {
+        for (const item of (g.optionItemList || [])) {
+          if (item.code === code || code.includes(item.code)) {
+            return `${item.text} ${item.extraCode ? '[' + item.extraCode + ']' : ''}`;
+          }
+        }
+      }
+      return code;
+    },
+    vehicleInfoText() {
+      if (!this.result) return '';
+      return this.result.vehicleInfo || (this.vehicle && this.vehicle.title) || this.result.vin || '';
+    },
     currentHost() {
       if (this.result) {
         if (this.result.siteUrl) {
@@ -184,6 +356,25 @@ export default {
     }
   },
   methods: {
+    openModal() {
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+    },
+    selectOption(groupTitle, code) {
+      this.$set(this.selectedOptions, groupTitle, code);
+    },
+    handleCheckFit() {
+      const vals = Object.values(this.selectedOptions).filter(Boolean);
+      if (!vals.length) return;
+      const optionParam = vals.join(';');
+      this.showModal = false;
+      this.$emit('check-fit-options', {
+        option: optionParam,
+        selectedOptions: { ...this.selectedOptions }
+      });
+    },
     isCurrentVehicleMatch(item) {
       const vInfo = (this.result && this.result.vehicleInfo ? this.result.vehicleInfo : (this.vehicle && this.vehicle.title ? this.vehicle.title : '')).toLowerCase();
       if (!vInfo) return false;
@@ -687,6 +878,456 @@ export default {
   transition: opacity 0.2s ease;
 }
 .fade-enter, .fade-leave-to {
+  opacity: 0;
+}
+
+/* ========================================================
+   Стили опций автомобиля и модального окна (Vehicle Options)
+   ======================================================== */
+
+.selected-option-row {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.selected-option-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #a7f3d0;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+}
+
+.selected-option-badge strong {
+  color: #34d399;
+}
+
+.option-check-icon {
+  font-weight: 800;
+  color: #10b981;
+}
+
+.btn-change-option {
+  background: none;
+  border: none;
+  color: var(--accent-cyan);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.btn-change-option:hover {
+  color: #ffffff;
+}
+
+/* Баннер с предложением выбрать опции при статусе partial */
+.options-alert-banner {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.08) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.12);
+}
+
+.options-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.options-alert-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.options-alert-text h4 {
+  margin: 0 0 0.25rem 0;
+  color: #fbbf24;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.options-alert-text p {
+  margin: 0;
+  color: #d1d5db;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.btn-select-options {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #0b0f19;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+  white-space: nowrap;
+}
+
+.btn-select-options:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+.btn-select-options .btn-subtext {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ========================================================
+   Модальное окно (Modal Dialog)
+   ======================================================== */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.25s ease-out;
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modal-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.modal-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-vehicle-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+}
+
+.badge-icon {
+  font-size: 1.5rem;
+}
+
+.badge-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.badge-title {
+  font-weight: 700;
+  color: #f3f4f6;
+  font-size: 0.92rem;
+}
+
+.badge-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.badge-oem {
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.modal-instruction {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.option-group-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.group-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.group-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.group-tag {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.option-pill-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.option-pill-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.option-pill-card.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+.custom-radio {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.option-pill-card.active .custom-radio {
+  border-color: #6366f1;
+}
+
+.radio-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  background: #818cf8;
+  border-radius: 50%;
+}
+
+.option-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.option-title {
+  font-size: 0.88rem;
+  color: #f3f4f6;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.option-code-pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.btn-modal-cancel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.btn-modal-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
+}
+
+.btn-modal-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+}
+
+.btn-modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-modal-submit .btn-subtext {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.spinner-small {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter, .modal-fade-leave-to {
   opacity: 0;
 }
 </style>

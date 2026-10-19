@@ -58,6 +58,7 @@
           :oem-code="currentOem"
           :vehicle="vehicleData"
           :catalog-host="(vehicleData && vehicleData.siteUrl ? getHost(vehicleData.siteUrl) : (decodedVehicle && decodedVehicle.catalogHost ? decodedVehicle.catalogHost : ''))"
+          @check-fit-options="onCheckFitOptions"
         />
 
         <StatusAlert 
@@ -235,16 +236,29 @@ export default {
       const vin = payload.vin;
       const oem = payload.oem;
       const brandId = payload.brand || (this.vehicleData && this.vehicleData.brandId) || (this.decodedVehicle && this.decodedVehicle.brandId) || '';
+      const option = payload.option || '';
 
       this.currentOem = oem;
       this.oemLoading = true;
       this.error = null;
-      this.oemResult = null;
+      if (!option) {
+        this.oemResult = null;
+      }
 
       try {
-        const categoryUrl = (this.vehicleData && this.vehicleData.url) || '';
+        const categoryUrl = payload.categoryUrl || (this.vehicleData && this.vehicleData.url) || (this.oemResult && this.oemResult.categoryUrl) || '';
+        const partUrl = payload.partUrl || (this.oemResult && this.oemResult.cleanPartUrl) || (this.oemResult && this.oemResult.partUrl) || '';
+        const queryParams = new URLSearchParams({
+          vin,
+          oem,
+          brand: brandId,
+          categoryUrl,
+          partUrl,
+          option
+        });
+
         const response = await fetch(
-          `/api/check-oem.php?vin=${encodeURIComponent(vin)}&oem=${encodeURIComponent(oem)}&brand=${encodeURIComponent(brandId)}&categoryUrl=${encodeURIComponent(categoryUrl)}`,
+          `/api/check-oem.php?${queryParams.toString()}`,
           { headers: { 'Accept': 'application/json' } }
         );
 
@@ -274,6 +288,17 @@ export default {
       } finally {
         this.oemLoading = false;
       }
+    },
+
+    onCheckFitOptions(payload) {
+      this.onSearchOem({
+        vin: this.currentVin || (this.vehicleData && this.vehicleData.vin),
+        oem: this.currentOem || (this.oemResult && this.oemResult.oem),
+        brand: (this.vehicleData && this.vehicleData.brandId) || (this.decodedVehicle && this.decodedVehicle.brandId) || '',
+        categoryUrl: (this.vehicleData && this.vehicleData.url) || (this.oemResult && this.oemResult.categoryUrl) || '',
+        partUrl: (this.oemResult && this.oemResult.cleanPartUrl) || (this.oemResult && this.oemResult.partUrl) || '',
+        option: payload.option
+      });
     },
 
     onResetVin() {
