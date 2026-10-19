@@ -13,21 +13,6 @@
         </div>
       </div>
 
-      <!-- Кнопки быстрого выбора примеров -->
-      <div v-if="!vehicle" class="presets">
-        <span class="preset-label">Примеры:</span>
-        <button 
-          v-for="item in activePresets" 
-          :key="item.vin"
-          type="button" 
-          class="btn-preset" 
-          @click="selectPreset(item)"
-          :title="item.label"
-        >
-          <span class="preset-icon" v-if="item.icon">{{ item.icon }}</span>
-          {{ item.short }}
-        </button>
-      </div>
     </div>
 
     <form @submit.prevent="handleSubmit" class="search-form">
@@ -240,44 +225,7 @@ export default {
       vinInput: '',
       oemInput: '',
       vinError: null,
-      oemError: null,
-      allPresets: [
-        { 
-          short: 'Lincoln Navigator', 
-          label: '2012 Lincoln Navigator (5LMJJ2J54CEL07288)', 
-          vin: '5LMJJ2J54CEL07288', 
-          oem: 'FL-820-S',
-          icon: '👑'
-        },
-        { 
-          short: 'Infiniti QX50', 
-          label: '2019 Infiniti QX50 (3PCAJ5M34KF147171)', 
-          vin: '3PCAJ5M34KF147171', 
-          oem: '48430-5NB0A',
-          icon: '🏎️'
-        },
-        { 
-          short: 'Mercedes GLE', 
-          label: '2016 Mercedes GLE350 (4JGDA5HB8GA646272)', 
-          vin: '4JGDA5HB8GA646272', 
-          oem: '2761800009',
-          icon: '⭐'
-        },
-        { 
-          short: 'BMW X5', 
-          label: 'BMW X5 (5UXCR6C05M9B12345)', 
-          vin: '5UXCR6C05M9B12345', 
-          oem: '11428575211',
-          icon: '🔵'
-        },
-        { 
-          short: 'Toyota Camry', 
-          label: 'Toyota Camry (4T1B11HK5LU123456)', 
-          vin: '4T1B11HK5LU123456', 
-          oem: '04152-YZZA1',
-          icon: '🔴'
-        }
-      ]
+      oemError: null
     };
   },
   watch: {
@@ -298,9 +246,6 @@ export default {
     }
   },
   computed: {
-    activePresets() {
-      return this.allPresets;
-    },
     isValidVin() {
       const clean = this.vinInput.trim().toUpperCase();
       return clean.length === 17 && !/[IOQ]/i.test(clean) && /^[A-HJ-NPR-Z0-9]{17}$/i.test(clean);
@@ -324,12 +269,6 @@ export default {
     onOemInput(event) {
       this.oemInput = event.target.value.toUpperCase().trimStart();
       this.oemError = null;
-    },
-    selectPreset(item) {
-      this.vinInput = item.vin;
-      this.oemInput = item.oem || '';
-      this.vinError = null;
-      this.$emit('decode-vin', this.vinInput);
     },
     clearVinInput() {
       this.vinInput = '';
@@ -458,44 +397,6 @@ export default {
 .step2-subtitle {
   color: #a5b4fc;
   font-weight: 500;
-}
-
-.presets {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.preset-label {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  margin-right: 0.2rem;
-}
-
-.btn-preset {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  color: var(--accent-cyan);
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.preset-icon {
-  font-size: 0.85rem;
-}
-
-.btn-preset:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: rgba(56, 189, 248, 0.4);
-  transform: translateY(-1px);
 }
 
 .search-form {
