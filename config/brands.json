@@ -1,0 +1,30 @@
+{
+  "brands": [
+    {
+      "id": "infiniti",
+      "name": "Infiniti",
+      "siteUrl": "https://www.infinitipartsdeal.com",
+      "siteCode": "IPD",
+      "searchPlaceholder": "Search by Part Number, Part Name, or Vehicle",
+      "vinPlaceholder": "Например: 3PCAJ5M34KF147171",
+      "oemPlaceholder": "Например: 48430-5NB0A или 22401-1LA1C",
+      "icon": "🏎️",
+      "exampleVin": "3PCAJ5M34KF147171",
+      "exampleOem": "48430-5NB0A",
+      "exampleCar": "2019 Infiniti QX50"
+    },
+    {
+      "id": "mercedes-benz",
+      "name": "Mercedes-Benz",
+      "siteUrl": "https://www.mbpartsgiant.com",
+      "siteCode": "MBPG",
+      "searchPlaceholder": "Search by Part Number, Part Name, or Vehicle",
+      "vinPlaceholder": "Например: 4JGDA5HB8GA646272",
+      "oemPlaceholder": "Например: 2761800009 или 000989680511",
+      "icon": "⭐",
+      "exampleVin": "4JGDA5HB8GA646272",
+      "exampleOem": "2761800009",
+      "exampleCar": "2016 Mercedes-Benz GLE350"
+    }
+  ]
+}
