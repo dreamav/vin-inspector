@@ -11,10 +11,9 @@ description: >-
 Runbook for starting, checking, and managing development servers for the VIN Inspector project.
 
 ## Environment & Paths
-- **PHP 7.1 Executable:** `D:\OpenServer\modules\php\PHP-7.1-x64\php.exe`
-  - Do NOT search for PHP or run scans across drives. Always use this exact binary path.
-- **Backend Directory:** `d:\vibecoding\vincode` (Project root)
-- **Frontend Directory:** `d:\vibecoding\vincode\frontend`
+- **PHP 7.1 Command:** `php` (Интерпретатор PHP 7.1 уже в системном PATH: `D:\OpenServer\modules\php\PHP-7.1\php.exe`).
+- **Backend Directory:** `e:\vibecoding\vincode` (Project root)
+- **Frontend Directory:** `e:\vibecoding\vincode\frontend`
 - **Backend Port:** `8000` (API endpoint: `http://localhost:8000`)
 - **Frontend Port:** `3000` (Dev server: `http://localhost:3000`)
 
@@ -32,8 +31,8 @@ If both are active and responding, report the ready status to the user immediate
 ### 2. Launch Backend (PHP 7.1)
 If port 8000 is not running:
 - Run via `run_command`:
-  - **CommandLine:** `& "D:\OpenServer\modules\php\PHP-7.1-x64\php.exe" -S localhost:8000`
-  - **Cwd:** `d:\vibecoding\vincode`
+  - **CommandLine:** `php -S localhost:8000`
+  - **Cwd:** `e:\vibecoding\vincode`
   - **IsDaemon:** `true`
   - **WaitMsBeforeAsync:** `1500`
 
