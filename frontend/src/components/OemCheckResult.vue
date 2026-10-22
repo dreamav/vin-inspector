@@ -1566,33 +1566,34 @@ export default {
 /* Сетка карточек */
 .alshned-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .alshned-card {
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
   position: relative;
+  width: 100%;
 }
 
 .alshned-card:hover {
   border-color: rgba(99, 102, 241, 0.5);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.22);
 }
 
 .alshned-card-media {
   position: relative;
   width: 100%;
-  height: 220px;
+  height: 110px;
   background: #090e17;
   overflow: hidden;
   display: flex;
@@ -1628,22 +1629,22 @@ export default {
   align-items: center;
   justify-content: center;
   color: #64748b;
-  font-size: 2.2rem;
-  gap: 0.35rem;
+  font-size: 1.6rem;
+  gap: 0.2rem;
 }
 
 .alshned-no-img small {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: #94a3b8;
 }
 
 .alshned-status {
   position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
+  top: 0.45rem;
+  right: 0.45rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
   font-weight: 700;
   backdrop-filter: blur(8px);
   letter-spacing: 0.02em;
@@ -1653,7 +1654,7 @@ export default {
 .alshned-status.in-stock {
   background: rgba(16, 185, 129, 0.9);
   color: #ffffff;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
 }
 
 .alshned-status.out-of-stock {
@@ -1662,41 +1663,41 @@ export default {
 }
 
 .alshned-card-body {
-  padding: 1.1rem 1.25rem;
+  padding: 0.65rem 0.8rem;
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 0.6rem;
+  gap: 0.35rem;
 }
 
 .alshned-card-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .alshned-vendor-tag {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #818cf8;
   background: rgba(99, 102, 241, 0.12);
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
   border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
 .alshned-item-title {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.35;
   color: #f8fafc;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 2.75rem;
+  min-height: 2.15rem;
   margin: 0;
 }
 
@@ -1712,12 +1713,12 @@ export default {
 
 .alshned-card-bottom {
   margin-top: auto;
-  padding-top: 0.85rem;
+  padding-top: 0.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.85rem;
+  gap: 0.5rem;
 }
 
 .alshned-price-wrapper {
@@ -1726,7 +1727,7 @@ export default {
 }
 
 .alshned-price-label {
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   color: #94a3b8;
   text-transform: uppercase;
   font-weight: 600;
@@ -1734,7 +1735,7 @@ export default {
 }
 
 .alshned-price-val {
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #34d399;
   letter-spacing: -0.02em;
@@ -1744,22 +1745,22 @@ export default {
 .alshned-buy-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1rem;
-  border-radius: var(--radius-sm, 8px);
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
   background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   font-weight: 700;
   text-decoration: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.35);
 }
 
 .alshned-buy-btn:hover {
   background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.5);
   filter: brightness(1.08);
 }
 
@@ -1776,22 +1777,22 @@ export default {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding: 1.4rem 1.75rem;
+  padding: 1.2rem 1.4rem;
   background: rgba(15, 23, 42, 0.45);
   border: 1px dashed rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .alshned-empty-box .empty-icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   background: rgba(148, 163, 184, 0.1);
   border: 1px solid rgba(148, 163, 184, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
 }
 
@@ -1800,21 +1801,21 @@ export default {
 }
 
 .alshned-empty-box .empty-title {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #e2e8f0;
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.2rem 0;
 }
 
 .alshned-empty-box .empty-desc {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted, #94a3b8);
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.4rem 0;
 }
 
 .alshned-empty-box .empty-desc code {
   background: rgba(255, 255, 255, 0.08);
-  padding: 0.15rem 0.45rem;
+  padding: 0.12rem 0.4rem;
   border-radius: 4px;
   color: #f1f5f9;
   font-family: inherit;
@@ -1825,7 +1826,7 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #60a5fa;
   text-decoration: none;
@@ -1837,7 +1838,13 @@ export default {
   text-decoration: underline;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  .alshned-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
   .alshned-header {
     flex-direction: column;
     align-items: flex-start;
