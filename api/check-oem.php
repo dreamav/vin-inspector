@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/alshned.php';
 
 $vin = trim($_GET['vin'] ?? $_POST['vin'] ?? '');
 $oem = trim($_GET['oem'] ?? $_POST['oem'] ?? '');
@@ -38,9 +39,16 @@ $vin = strtoupper(preg_replace('/\s+/', '', $vin));
 // Определяем бренд и сайт из конфигурации (по параметру бренда или переданному URL)
 $brandConfig = findBrandConfig($brandParam, $categoryUrl ?: $inputPartUrl, $vin);
 if (!$brandConfig) {
+    $alshnedData = searchAlshnedAuto($oem);
     echo json_encode([
         'success' => false,
-        'error' => "Каталог запчастей для марки '{$brandParam}' пока не подключен"
+        'oem' => $oem,
+        'vin' => $vin,
+        'brand' => $brandParam,
+        'status' => 'unknown',
+        'confirmText' => "Каталог запчастей для марки '{$brandParam}' пока не подключен",
+        'error' => "Каталог запчастей для марки '{$brandParam}' пока не подключен",
+        'alshned' => $alshnedData
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -99,9 +107,17 @@ if (!empty($inputPartUrl)) {
 
     if (!$searchData || empty($searchData['data']['redirectUrl'])) {
         $host = parse_url($siteUrl, PHP_URL_HOST);
+        $alshnedData = searchAlshnedAuto($oem);
         echo json_encode([
             'success' => false,
+            'oem' => $oem,
+            'vin' => $vin,
+            'brand' => $brandName,
+            'siteUrl' => $siteUrl,
+            'status' => 'not-in-catalog',
+            'confirmText' => "Деталь с OEM-кодом {$oem} не найдена в каталоге {$host}",
             'error' => "Деталь с OEM-кодом {$oem} не найдена в каталоге {$host} ({$brandName})",
+            'alshned' => $alshnedData,
             'raw' => $searchData
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -331,6 +347,9 @@ if (!empty($fitmentDiv) && preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $fitmentDi
     }
 }
 
+// Шаг 7: Поиск предложений детали на alshnedauto.com
+$alshnedData = searchAlshnedAuto($oem);
+
 echo json_encode([
     'success' => true,
     'vin' => $vin,
@@ -353,5 +372,6 @@ echo json_encode([
     'fitmentLi' => $fitmentLi,
     'fitmentVehicles' => $fitmentVehicles,
     'rawBlock' => $confirmBlock,
-    'rawCheckBlock' => $rawCheckBlock
+    'rawCheckBlock' => $rawCheckBlock,
+    'alshned' => $alshnedData
 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);

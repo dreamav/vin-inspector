@@ -278,7 +278,14 @@ export default {
               this.saveToHistory(this.vehicleData);
             }
           } else {
-            this.error = result.error || 'Деталь не найдена в каталоге';
+            if (result.alshned) {
+              this.oemResult = result;
+              if (!result.alshned.count) {
+                this.error = result.error || 'Деталь не найдена в каталоге';
+              }
+            } else {
+              this.error = result.error || 'Деталь не найдена в каталоге';
+            }
           }
         } else {
           this.error = `Сервер ответил ошибкой HTTP ${response.status} при проверке OEM`;

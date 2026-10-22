@@ -15,7 +15,7 @@
       <div class="status-banner">
         <div class="status-icon-wrap">
           <span v-if="result.status === 'fit'" class="status-icon icon-fit">✓</span>
-          <span v-else-if="result.status === 'not-fit'" class="status-icon icon-not-fit">✕</span>
+          <span v-else-if="result.status === 'not-fit' || result.status === 'not-in-catalog'" class="status-icon icon-not-fit">✕</span>
           <span v-else class="status-icon icon-unknown">ℹ</span>
         </div>
 
@@ -132,6 +132,111 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Секция предложений детали на Alshned Auto Parts -->
+      <div v-if="result.alshned" class="alshned-section">
+        <div class="alshned-header">
+          <div class="alshned-title-wrap">
+            <span class="alshned-badge-icon">🛒</span>
+            <div>
+              <div class="alshned-title-row">
+                <h3 class="alshned-title">Предложения на Alshned Auto Parts</h3>
+                <span v-if="result.alshned.count > 0" class="alshned-counter badge-found">
+                  {{ result.alshned.count }} {{ result.alshned.count === 1 ? 'предложение' : 'предложений' }}
+                </span>
+                <span v-else class="alshned-counter badge-empty">
+                  0 предложений
+                </span>
+              </div>
+              <p class="alshned-subtitle">
+                Поиск запчасти по номеру OEM на
+                <a :href="result.alshned.searchUrl" target="_blank" rel="noopener noreferrer" class="link-alshned-site">
+                  alshnedauto.com ↗
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <a 
+            :href="result.alshned.searchUrl" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="alshned-search-btn"
+          >
+            <span>Смотреть все на alshnedauto.com</span>
+            <span class="btn-arrow">↗</span>
+          </a>
+        </div>
+
+        <!-- Сетка карточек товаров Alshned Auto -->
+        <div v-if="result.alshned.products && result.alshned.products.length" class="alshned-grid">
+          <div 
+            v-for="item in result.alshned.products" 
+            :key="item.id" 
+            class="alshned-card"
+          >
+            <div class="alshned-card-media">
+              <a :href="item.url" target="_blank" rel="noopener noreferrer" class="alshned-img-link">
+                <img 
+                  v-if="item.image" 
+                  :src="item.image" 
+                  :alt="item.title"
+                  class="alshned-img"
+                  loading="lazy"
+                />
+                <div v-else class="alshned-no-img">
+                  <span>📷</span>
+                  <small>Нет фото</small>
+                </div>
+              </a>
+              <span v-if="item.available" class="alshned-status in-stock">✓ В наличии</span>
+              <span v-else class="alshned-status out-of-stock">Под заказ</span>
+            </div>
+
+            <div class="alshned-card-body">
+              <div class="alshned-card-meta" v-if="item.vendor">
+                <span class="alshned-vendor-tag">{{ item.vendor }}</span>
+              </div>
+              <h4 class="alshned-item-title">
+                <a :href="item.url" target="_blank" rel="noopener noreferrer" :title="item.title">
+                  {{ item.title }}
+                </a>
+              </h4>
+
+              <div class="alshned-card-bottom">
+                <div class="alshned-price-wrapper">
+                  <span class="alshned-price-label">Цена:</span>
+                  <span class="alshned-price-val">{{ item.priceFormatted || ('$' + item.price) }}</span>
+                </div>
+
+                <a 
+                  :href="item.url" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="alshned-buy-btn"
+                >
+                  <span>Купить</span>
+                  <span class="btn-arrow">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Если предложений не найдено -->
+        <div v-else class="alshned-empty-box">
+          <div class="empty-icon-wrap">🔍</div>
+          <div class="empty-info">
+            <h4 class="empty-title">На складе alshnedauto.com запчасть не найдена</h4>
+            <p class="empty-desc">
+              По артикулу <code>{{ result.alshned.query || result.oem }}</code> актуальных предложений не обнаружено.
+            </p>
+            <a :href="result.alshned.searchUrl" target="_blank" rel="noopener noreferrer" class="empty-link">
+              Проверить результаты поиска на alshnedauto.com ↗
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -348,6 +453,8 @@ export default {
           return '✓ Деталь совместима (Подходит)';
         case 'not-fit':
           return '✕ Не совместима (Не подходит)';
+        case 'not-in-catalog':
+          return '✕ Не найдена в каталоге марки';
         case 'partial':
           return '⚠️ Частичная совместимость / Требуется уточнение';
         default:
@@ -401,7 +508,8 @@ export default {
 }
 
 /* Стили в зависимости от статуса */
-.oem-result-card.status-not-fit {
+.oem-result-card.status-not-fit,
+.oem-result-card.status-not-in-catalog {
   border: 1.5px solid rgba(239, 68, 68, 0.4);
   background: linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, rgba(13, 19, 33, 0.95) 100%);
   box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
@@ -1329,5 +1437,421 @@ export default {
 }
 .modal-fade-enter, .modal-fade-leave-to {
   opacity: 0;
+}
+
+/* ==========================================================================
+   Секция предложений Alshned Auto Parts
+   ========================================================================== */
+.alshned-section {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.alshned-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.alshned-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.alshned-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+}
+
+.alshned-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.alshned-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main, #ffffff);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.alshned-counter {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.alshned-counter.badge-found {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.alshned-counter.badge-empty {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.alshned-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0.25rem 0 0 0;
+}
+
+.link-alshned-site {
+  color: #818cf8;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.link-alshned-site:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
+
+.alshned-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.05rem;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.alshned-search-btn:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+}
+
+.alshned-search-btn .btn-arrow {
+  font-size: 0.95rem;
+  transition: transform 0.2s;
+}
+
+.alshned-search-btn:hover .btn-arrow {
+  transform: translate(2px, -2px);
+}
+
+/* Сетка карточек */
+.alshned-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1.25rem;
+}
+
+.alshned-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  position: relative;
+}
+
+.alshned-card:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.22);
+}
+
+.alshned-card-media {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: #090e17;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.alshned-img-link {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.alshned-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.35s ease;
+}
+
+.alshned-card:hover .alshned-img {
+  transform: scale(1.06);
+}
+
+.alshned-no-img {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 2.2rem;
+  gap: 0.35rem;
+}
+
+.alshned-no-img small {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.alshned-status {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  letter-spacing: 0.02em;
+  z-index: 2;
+}
+
+.alshned-status.in-stock {
+  background: rgba(16, 185, 129, 0.9);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+}
+
+.alshned-status.out-of-stock {
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+}
+
+.alshned-card-body {
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.6rem;
+}
+
+.alshned-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alshned-vendor-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.12);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.alshned-item-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #f8fafc;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.alshned-item-title a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.alshned-item-title a:hover {
+  color: #60a5fa;
+}
+
+.alshned-card-bottom {
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.alshned-price-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.alshned-price-label {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.alshned-price-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.alshned-buy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+}
+
+.alshned-buy-btn:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+  filter: brightness(1.08);
+}
+
+.alshned-buy-btn .btn-arrow {
+  transition: transform 0.2s;
+}
+
+.alshned-buy-btn:hover .btn-arrow {
+  transform: translate(2px, -2px);
+}
+
+/* Пустое состояние Alshned */
+.alshned-empty-box {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.4rem 1.75rem;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+}
+
+.alshned-empty-box .empty-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.alshned-empty-box .empty-info {
+  flex: 1;
+}
+
+.alshned-empty-box .empty-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 0.25rem 0;
+}
+
+.alshned-empty-box .empty-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0 0 0.5rem 0;
+}
+
+.alshned-empty-box .empty-desc code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.alshned-empty-box .empty-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #60a5fa;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.alshned-empty-box .empty-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .alshned-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .alshned-search-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .alshned-grid {
+    grid-template-columns: 1fr;
+  }
+  .alshned-empty-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
