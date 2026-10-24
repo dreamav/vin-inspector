@@ -43,9 +43,10 @@
               id="vin-input"
               ref="vinInput"
               type="text"
+              class="vin-input"
               v-model="vinInput"
               @input="onVinInput"
-              placeholder="Например: 5LMJJ2J54CEL07288 или 3PCAJ5M34KF147171"
+              placeholder="Введите 17 знаков VIN"
               maxlength="17"
               autocomplete="off"
               spellcheck="false"
@@ -548,6 +549,10 @@ export default {
   outline: none;
   transition: all 0.25s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.vin-input {
+  padding-right: 125px !important; /* Чтобы длинный текст никогда не наползал на кнопку [Скан] и 0/17 */
 }
 
 .input-wrapper.is-locked input {

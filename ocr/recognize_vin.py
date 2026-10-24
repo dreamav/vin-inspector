@@ -312,31 +312,57 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
         # 1. Exact 17-character string
         if len(norm) == 17:
             if is_valid_vin_structure(norm):
-                fixed_vin, valid = attempt_check_digit_repair(norm)
-                score = (500 if valid else 50) + (100 if is_labeled else 0) + int(float(conf) * 100)
-                candidates.append({
-                    'vin': fixed_vin,
-                    'raw_norm': norm,
-                    'confidence': float(conf),
-                    'check_digit_valid': valid,
-                    'score': score,
-                    'source': text
-                })
+                # Если контрольный знак валиден ЕСТЕСТВЕННО (без искусственных замен)
+                is_naturally_valid, _ = validate_vin_check_digit(norm)
+                if is_naturally_valid:
+                    score = 1500 + (100 if is_labeled else 0) + int(float(conf) * 100)
+                    candidates.append({
+                        'vin': norm,
+                        'raw_norm': norm,
+                        'confidence': float(conf),
+                        'check_digit_valid': True,
+                        'score': score,
+                        'source': text
+                    })
+                else:
+                    fixed_vin, valid = attempt_check_digit_repair(norm)
+                    score = (500 if valid else 50) + (100 if is_labeled else 0) + int(float(conf) * 100)
+                    candidates.append({
+                        'vin': fixed_vin,
+                        'raw_norm': norm,
+                        'confidence': float(conf),
+                        'check_digit_valid': valid,
+                        'score': score,
+                        'source': text
+                    })
         # 2. 17-char slice inside longer string (e.g., *WAUZZZF23KA123456* or VIN:1HG...)
         elif len(norm) > 17:
             for s in range(len(norm) - 16):
                 sub = norm[s:s+17]
                 if is_valid_vin_structure(sub):
-                    fixed_vin, valid = attempt_check_digit_repair(sub)
-                    score = (450 if valid else 40) + (100 if is_labeled else 0) + int(float(conf) * 90)
-                    candidates.append({
-                        'vin': fixed_vin,
-                        'raw_norm': sub,
-                        'confidence': float(conf) * 0.95,
-                        'check_digit_valid': valid,
-                        'score': score,
-                        'source': text
-                    })
+                    # Если срез валиден ЕСТЕСТВЕННО (без замен)
+                    is_naturally_valid, _ = validate_vin_check_digit(sub)
+                    if is_naturally_valid:
+                        score = 1450 + (100 if is_labeled else 0) + int(float(conf) * 90)
+                        candidates.append({
+                            'vin': sub,
+                            'raw_norm': sub,
+                            'confidence': float(conf) * 0.98,
+                            'check_digit_valid': True,
+                            'score': score,
+                            'source': text
+                        })
+                    else:
+                        fixed_vin, valid = attempt_check_digit_repair(sub)
+                        score = (450 if valid else 40) + (100 if is_labeled else 0) + int(float(conf) * 90)
+                        candidates.append({
+                            'vin': fixed_vin,
+                            'raw_norm': sub,
+                            'confidence': float(conf) * 0.95,
+                            'check_digit_valid': valid,
+                            'score': score,
+                            'source': text
+                        })
 
     # 3. Concatenate adjacent blocks ONLY if they are strictly on the same horizontal line
     if len(ocr_results) >= 2:
@@ -363,16 +389,28 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
             avg_conf = (float(conf1) + float(conf2)) / 2.0
             
             if len(combined) == 17 and is_valid_vin_structure(combined):
-                fixed_vin, valid = attempt_check_digit_repair(combined)
-                score = (400 if valid else 30) + int(avg_conf * 80)
-                candidates.append({
-                    'vin': fixed_vin,
-                    'raw_norm': combined,
-                    'confidence': avg_conf * 0.9,
-                    'check_digit_valid': valid,
-                    'score': score,
-                    'source': f"{raw_t1} + {raw_t2}"
-                })
+                is_naturally_valid, _ = validate_vin_check_digit(combined)
+                if is_naturally_valid:
+                    score = 1400 + int(avg_conf * 80)
+                    candidates.append({
+                        'vin': combined,
+                        'raw_norm': combined,
+                        'confidence': avg_conf * 0.95,
+                        'check_digit_valid': True,
+                        'score': score,
+                        'source': f"{raw_t1} + {raw_t2}"
+                    })
+                else:
+                    fixed_vin, valid = attempt_check_digit_repair(combined)
+                    score = (400 if valid else 30) + int(avg_conf * 80)
+                    candidates.append({
+                        'vin': fixed_vin,
+                        'raw_norm': combined,
+                        'confidence': avg_conf * 0.9,
+                        'check_digit_valid': valid,
+                        'score': score,
+                        'source': f"{raw_t1} + {raw_t2}"
+                    })
 
     return candidates
 
