@@ -77,27 +77,27 @@ if (!$fileSaved || !file_exists($tmpFilePath) || filesize($tmpFilePath) === 0) {
     exit(0);
 }
 
-// Locate Python executable and recognition script
-$pythonCandidates = [
-    $projectRoot . DIRECTORY_SEPARATOR . 'ocr' . DIRECTORY_SEPARATOR . '.venv' . DIRECTORY_SEPARATOR . 'Scripts' . DIRECTORY_SEPARATOR . 'python.exe', // Windows venv
-    $projectRoot . DIRECTORY_SEPARATOR . 'ocr' . DIRECTORY_SEPARATOR . '.venv' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'python',        // Linux/VDS venv
-    $projectRoot . DIRECTORY_SEPARATOR . '.venv' . DIRECTORY_SEPARATOR . 'Scripts' . DIRECTORY_SEPARATOR . 'python.exe',
-    $projectRoot . DIRECTORY_SEPARATOR . '.venv' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'python',
-    'python3',
-    'python'
-];
+// Locate Python executable and recognition script dynamically (Windows & Linux compatible)
+$isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+$baseDir = dirname(__DIR__);
 
-$pythonBin = 'python';
-foreach ($pythonCandidates as $candidate) {
-    if (file_exists($candidate)) {
-        $pythonBin = $candidate;
-        break;
+if ($isWindows) {
+    $pythonBin = $baseDir . '/ocr/.venv/Scripts/python.exe';
+} else {
+    $pythonBin = $baseDir . '/ocr/.venv/bin/python3';
+    if (!file_exists($pythonBin)) {
+        $pythonBin = $baseDir . '/ocr/.venv/bin/python';
     }
 }
 
-$scriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'ocr' . DIRECTORY_SEPARATOR . 'recognize_vin.py';
+// Fallback to system python if venv not found
+if (!file_exists($pythonBin)) {
+    $pythonBin = $isWindows ? 'python' : 'python3';
+}
+
+$scriptPath = $baseDir . '/ocr/recognize_vin.py';
 if (!file_exists($scriptPath)) {
-    $scriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'recognize_vin.py';
+    $scriptPath = $baseDir . '/recognize_vin.py';
 }
 
 // Execute OCR recognition command

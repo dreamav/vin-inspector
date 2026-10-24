@@ -29,13 +29,13 @@
               ></video>
 
               <!-- Направляющая визирная рамка для выравнивания VIN -->
-              <div v-if="!cameraLoading && !cameraError" class="scan-reticle">
+              <div v-if="!cameraLoading && !cameraError" class="scan-reticle" ref="guideBox">
                 <div class="reticle-corner tl"></div>
                 <div class="reticle-corner tr"></div>
                 <div class="reticle-corner bl"></div>
                 <div class="reticle-corner br"></div>
                 <div class="reticle-scan-line"></div>
-                <div class="reticle-label">Поместите VIN-код в эту рамку</div>
+                <div class="reticle-label">Поместите VIN-код в рамку и нажмите синюю кнопку снизу</div>
               </div>
 
               <!-- Лоадер камеры -->
@@ -58,6 +58,13 @@
 
             <!-- Элементы управления камерой -->
             <div class="camera-controls" v-if="!cameraError">
+              <!-- Плашка-подсказка прямо над кнопкой затвора -->
+              <div class="capture-hint-badge">
+                <span class="hint-hand">👉</span>
+                <span class="hint-text">Сделайте снимок</span>
+                <span class="hint-arrow">👇</span>
+              </div>
+
               <button 
                 type="button" 
                 class="btn-capture" 
@@ -118,7 +125,7 @@
             </div>
             <div class="processing-content">
               <span class="spinner-large"></span>
-              <h4>Распознавание VIN-кода...</h4>
+              <h4>ИИ распознает VIN-код (1–2 сек)...</h4>
               <p class="processing-step">{{ processingStepText }}</p>
             </div>
           </div>
@@ -299,22 +306,62 @@ export default {
     },
     capturePhoto() {
       const video = this.$refs.video;
-      const canvas = this.$refs.canvas;
-      if (!video || !canvas) return;
+      if (!video) return;
 
-      const width = video.videoWidth || 1280;
-      const height = video.videoHeight || 720;
+      // Сразу отображаем оверлей с лоадером
+      this.isProcessing = true;
+      this.scanError = null;
+      this.processingStepText = 'Кадрирование и отправка в ИИ...';
 
-      canvas.width = width;
-      canvas.height = height;
+      try {
+        const guideBox = this.$refs.guideBox;
+        const canvas = this.$refs.canvas || document.createElement('canvas');
 
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, width, height);
+        let cropX = 0;
+        let cropY = 0;
+        let cropWidth = video.videoWidth || 1280;
+        let cropHeight = video.videoHeight || 720;
 
-      canvas.toBlob(blob => {
-        if (!blob) return;
-        this.processBlob(blob);
-      }, 'image/jpeg', 0.95);
+        if (guideBox && video.videoWidth > 0 && video.videoHeight > 0) {
+          const box = guideBox.getBoundingClientRect();
+          const videoRect = video.getBoundingClientRect();
+
+          if (videoRect.width > 0 && videoRect.height > 0) {
+            // Масштаб натурального разрешения видео к его отображению на экране
+            const scaleX = video.videoWidth / videoRect.width;
+            const scaleY = video.videoHeight / videoRect.height;
+
+            // Добавляем 10% запаса по бокам и 15% по высоте, чтобы случайно не срезать символы
+            const padX = (box.width * 0.1) * scaleX;
+            const padY = (box.height * 0.15) * scaleY;
+
+            cropX = Math.max(0, (box.left - videoRect.left) * scaleX - padX);
+            cropY = Math.max(0, (box.top - videoRect.top) * scaleY - padY);
+            cropWidth = Math.min(video.videoWidth - cropX, box.width * scaleX + padX * 2);
+            cropHeight = Math.min(video.videoHeight - cropY, box.height * scaleY + padY * 2);
+          }
+        }
+
+        // Создаем холст ровно под размер этой аккуратной полоски
+        canvas.width = Math.max(1, Math.round(cropWidth));
+        canvas.height = Math.max(1, Math.round(cropHeight));
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(blob => {
+          if (!blob) {
+            this.isProcessing = false;
+            this.scanError = 'Не удалось захватить кадр с камеры';
+            return;
+          }
+          this.processBlob(blob);
+        }, 'image/jpeg', 0.92);
+      } catch (err) {
+        console.error('Ошибка захвата кадра:', err);
+        this.isProcessing = false;
+        this.scanError = 'Ошибка при кадрировании: ' + (err.message || 'сбой оборудования');
+      }
     },
     processFile(file) {
       if (!file.type.startsWith('image/')) {
@@ -564,14 +611,16 @@ export default {
 
 .reticle-label {
   position: absolute;
-  bottom: -28px;
+  bottom: -32px;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 0.78rem;
+  width: 95%;
+  text-align: center;
+  font-size: 0.82rem;
   color: #93c5fd;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .camera-loader,
@@ -608,13 +657,66 @@ export default {
   margin-top: 12px;
 }
 
-/* Кнопка спуска камеры */
+/* Кнопка спуска камеры и подсказка */
 .camera-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding-top: 6px;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.capture-hint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 16px;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 20px;
+  color: #93c5fd;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.25);
+  animation: pulse-bounce 2s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hint-hand {
+  font-size: 1rem;
+}
+
+.hint-text {
+  font-size: 0.86rem;
+}
+
+.hint-arrow {
+  font-size: 0.95rem;
+  display: inline-block;
+  animation: arrow-bounce 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 0 22px rgba(59, 130, 246, 0.45);
+    border-color: rgba(96, 165, 250, 0.7);
+  }
+}
+
+@keyframes arrow-bounce {
+  from {
+    transform: translateY(-1px);
+  }
+  to {
+    transform: translateY(3px);
+  }
 }
 
 .btn-capture {
@@ -750,18 +852,23 @@ export default {
 }
 
 .preview-mini-wrap {
-  width: 180px;
-  height: 90px;
+  width: 220px;
+  max-width: 90%;
+  height: 65px;
   border-radius: 10px;
   overflow: hidden;
   border: 2px solid rgba(59, 130, 246, 0.4);
+  background: #030712;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-mini-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .processing-content h4 {
@@ -905,6 +1012,15 @@ export default {
   }
   .video-container {
     aspect-ratio: 4 / 3;
+  }
+  .reticle-label {
+    font-size: 0.74rem;
+    bottom: -30px;
+    width: 96%;
+  }
+  .capture-hint-badge {
+    font-size: 0.8rem;
+    padding: 5px 12px;
   }
   .btn-capture {
     width: 60px;
