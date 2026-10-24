@@ -30,6 +30,8 @@ Thumbs.db
 # Python & OCR
 .venv/
 ocr/.venv/
+ocr/tmp_images/
+tmp_images/
 __pycache__/
 *.pyc
 *.pyo

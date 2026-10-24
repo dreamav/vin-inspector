@@ -52,6 +52,16 @@
               :disabled="loading || decoding || !!decodedVehicle || !!vehicle"
             />
             <div class="input-meta">
+              <button 
+                v-if="!decodedVehicle && !vehicle" 
+                type="button" 
+                class="btn-camera-scan" 
+                @click="$emit('open-camera')"
+                title="Сфотографировать или загрузить фото VIN"
+              >
+                <span class="camera-icon">📷</span>
+                <span class="camera-label">Скан</span>
+              </button>
               <span class="char-count" :class="{ valid: vinInput.length === 17 }">
                 {{ vinInput.length }}/17
               </span>
@@ -65,6 +75,19 @@
                 ✕
               </button>
             </div>
+          </div>
+
+          <!-- Бейдж успешного распознавания по фото -->
+          <div v-if="ocrResult && !decodedVehicle && !vehicle" class="ocr-success-badge">
+            <span class="ocr-badge-icon">📸</span>
+            <div class="ocr-badge-details">
+              <span>VIN распознан по фото</span>
+              <span class="ocr-check-digit" :class="{ 'is-valid': ocrResult.checkDigitValid }">
+                {{ ocrResult.checkDigitValid ? '✓ Контрольный знак корректен' : '⚠️ Проверьте контрольный знак' }}
+              </span>
+              <span class="ocr-meta">({{ ocrResult.executionTime }}с)</span>
+            </div>
+            <button type="button" class="btn-ocr-dismiss" @click="ocrResult = null" title="Скрыть подсказку">✕</button>
           </div>
 
           <div v-if="vinError" class="validation-warning">
@@ -225,7 +248,9 @@ export default {
       vinInput: '',
       oemInput: '',
       vinError: null,
-      oemError: null
+      oemError: null,
+      isCameraModalOpen: false,
+      ocrResult: null
     };
   },
   watch: {
@@ -273,6 +298,7 @@ export default {
     clearVinInput() {
       this.vinInput = '';
       this.vinError = null;
+      this.ocrResult = null;
       this.$nextTick(() => {
         this.$refs.vinInput.focus();
       });
@@ -289,9 +315,20 @@ export default {
       this.oemInput = '';
       this.vinError = null;
       this.oemError = null;
+      this.ocrResult = null;
       this.$nextTick(() => {
         if (this.$refs.vinInput) {
           this.$refs.vinInput.focus();
+        }
+      });
+    },
+    setOcrVin(data) {
+      this.vinInput = data.vin;
+      this.vinError = null;
+      this.ocrResult = data;
+      this.$nextTick(() => {
+        if (this.isValidVin) {
+          this.$emit('decode-vin', this.vinInput);
         }
       });
     },
@@ -785,5 +822,99 @@ export default {
   .submit-btn {
     width: 100%;
   }
+}
+
+/* Кнопка сканирования камерой */
+.btn-camera-scan {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  border-radius: 6px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-camera-scan:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #60a5fa;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+.camera-icon {
+  font-size: 14px;
+}
+
+.camera-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+/* Бейдж результата распознавания */
+.ocr-success-badge {
+  margin-top: 0.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+  color: #d1fae5;
+  animation: fadeIn 0.2s ease;
+}
+
+.ocr-badge-icon {
+  font-size: 16px;
+}
+
+.ocr-badge-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.ocr-check-digit {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.ocr-check-digit.is-valid {
+  background: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+}
+
+.ocr-meta {
+  color: #9ca3af;
+  font-size: 0.74rem;
+  font-family: var(--font-mono);
+}
+
+.btn-ocr-dismiss {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem;
+  transition: color 0.2s;
+}
+
+.btn-ocr-dismiss:hover {
+  color: #fff;
 }
 </style>

@@ -40,6 +40,7 @@
           @search-catalog="onSearchCatalog"
           @search-oem="onSearchOem"
           @reset-vin="onResetVin"
+          @open-camera="isCameraModalOpen = true"
         />
 
         <!-- Alerts (Error / Info) -->
@@ -110,6 +111,13 @@
     <footer class="app-footer">
       <p>VIN Inspector • Система поиска и проверки автозапчастей по VIN и OEM</p>
     </footer>
+
+    <!-- Попап камеры и сканирования VIN (смонтирован на верхнем уровне приложения) -->
+    <VinCameraModal 
+      :is-open="isCameraModalOpen" 
+      @close="isCameraModalOpen = false" 
+      @vin-detected="onOcrVinDetected" 
+    />
   </div>
 </template>
 
@@ -119,6 +127,7 @@ import VehicleDetails from './components/VehicleDetails.vue';
 import HistorySidebar from './components/HistorySidebar.vue';
 import StatusAlert from './components/StatusAlert.vue';
 import OemCheckResult from './components/OemCheckResult.vue';
+import VinCameraModal from './components/VinCameraModal.vue';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
@@ -129,7 +138,8 @@ export default {
     VehicleDetails,
     HistorySidebar,
     StatusAlert,
-    OemCheckResult
+    OemCheckResult,
+    VinCameraModal
   },
   data() {
     return {
@@ -144,7 +154,8 @@ export default {
       demoNotice: false,
       vehicleData: null,
       oemResult: null,
-      history: []
+      history: [],
+      isCameraModalOpen: false
     };
   },
   created() {
@@ -163,6 +174,13 @@ export default {
         }
       } catch (e) {
         console.warn('Could not load brands from API', e);
+      }
+    },
+
+    onOcrVinDetected(data) {
+      this.isCameraModalOpen = false;
+      if (this.$refs.vinSearch) {
+        this.$refs.vinSearch.setOcrVin(data);
       }
     },
 
