@@ -26,3 +26,17 @@ yarn-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python & OCR
+.venv/
+ocr/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.cache/
