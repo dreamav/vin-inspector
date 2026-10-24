@@ -307,48 +307,55 @@ export default {
     capturePhoto() {
       const video = this.$refs.video;
       if (!video) return;
-
-      // Сразу отображаем оверлей с лоадером
       this.isProcessing = true;
       this.scanError = null;
       this.processingStepText = 'Кадрирование и отправка в ИИ...';
-
       try {
         const guideBox = this.$refs.guideBox;
         const canvas = this.$refs.canvas || document.createElement('canvas');
-
+        const vW = video.videoWidth;
+        const vH = video.videoHeight;
+        const videoRect = video.getBoundingClientRect();
         let cropX = 0;
         let cropY = 0;
-        let cropWidth = video.videoWidth || 1280;
-        let cropHeight = video.videoHeight || 720;
-
-        if (guideBox && video.videoWidth > 0 && video.videoHeight > 0) {
+        let cropWidth = vW;
+        let cropHeight = vH;
+        if (guideBox && vW > 0 && vH > 0 && videoRect.width > 0 && videoRect.height > 0) {
           const box = guideBox.getBoundingClientRect();
-          const videoRect = video.getBoundingClientRect();
-
-          if (videoRect.width > 0 && videoRect.height > 0) {
-            // Масштаб натурального разрешения видео к его отображению на экране
-            const scaleX = video.videoWidth / videoRect.width;
-            const scaleY = video.videoHeight / videoRect.height;
-
-            // Добавляем 10% запаса по бокам и 15% по высоте, чтобы случайно не срезать символы
-            const padX = (box.width * 0.1) * scaleX;
-            const padY = (box.height * 0.15) * scaleY;
-
-            cropX = Math.max(0, (box.left - videoRect.left) * scaleX - padX);
-            cropY = Math.max(0, (box.top - videoRect.top) * scaleY - padY);
-            cropWidth = Math.min(video.videoWidth - cropX, box.width * scaleX + padX * 2);
-            cropHeight = Math.min(video.videoHeight - cropY, box.height * scaleY + padY * 2);
+          // 1. Честный расчет геометрии object-fit: cover
+          const videoRatio = vW / vH;
+          const containerRatio = videoRect.width / videoRect.height;
+          let displayedW, displayedH, offsetX, offsetY, scale;
+          if (videoRatio > containerRatio) {
+            // Видео шире контейнера — обрезаются бока
+            displayedH = videoRect.height;
+            displayedW = videoRect.height * videoRatio;
+            offsetX = (displayedW - videoRect.width) / 2;
+            offsetY = 0;
+            scale = vH / videoRect.height;
+          } else {
+            // Видео выше контейнера (вертикалка на смартфоне) — обрезаются верх и низ
+            displayedW = videoRect.width;
+            displayedH = videoRect.width / videoRatio;
+            offsetX = 0;
+            offsetY = (displayedH - videoRect.height) / 2;
+            scale = vW / videoRect.width;
           }
+          // 2. Позиция рамки относительно реального изображения видео
+          const boxXInDisplay = (box.left - videoRect.left) + offsetX;
+          const boxYInDisplay = (box.top - videoRect.top) + offsetY;
+          // 3. Добавляем 15% запаса по бокам и 25% по высоте для гарантии захвата всех 17 знаков
+          const padX = (box.width * 0.15) * scale;
+          const padY = (box.height * 0.25) * scale;
+          cropX = Math.max(0, boxXInDisplay * scale - padX);
+          cropY = Math.max(0, boxYInDisplay * scale - padY);
+          cropWidth = Math.min(vW - cropX, box.width * scale + padX * 2);
+          cropHeight = Math.min(vH - cropY, box.height * scale + padY * 2);
         }
-
-        // Создаем холст ровно под размер этой аккуратной полоски
         canvas.width = Math.max(1, Math.round(cropWidth));
         canvas.height = Math.max(1, Math.round(cropHeight));
-
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-
         canvas.toBlob(blob => {
           if (!blob) {
             this.isProcessing = false;
@@ -356,7 +363,7 @@ export default {
             return;
           }
           this.processBlob(blob);
-        }, 'image/jpeg', 0.92);
+        }, 'image/jpeg', 0.95);
       } catch (err) {
         console.error('Ошибка захвата кадра:', err);
         this.isProcessing = false;
