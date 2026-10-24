@@ -104,10 +104,10 @@ if (!file_exists($scriptPath)) {
 $cmd = escapeshellarg($pythonBin) . ' ' . escapeshellarg($scriptPath) . ' ' . escapeshellarg($tmpFilePath) . ' 2>&1';
 $output = shell_exec($cmd);
 
-// CRITICAL CLEANUP: Delete temporary uploaded image immediately to prevent disk clutter
-if (file_exists($tmpFilePath)) {
-    @unlink($tmpFilePath);
-}
+// TEMPORARILY DISABLED (по запросу): фото сохраняются в ocr/tmp_images для анализа
+// if (file_exists($tmpFilePath)) {
+//     @unlink($tmpFilePath);
+// }
 
 // Parse JSON output from Python script
 $jsonStart = strpos($output, '{');
@@ -117,6 +117,7 @@ if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd >= $jsonStart) {
     $jsonStr = substr($output, $jsonStart, $jsonEnd - $jsonStart + 1);
     $result = json_decode($jsonStr, true);
     if (is_array($result)) {
+        $result['saved_image'] = $tmpFileName;
         echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit(0);
     }
@@ -128,5 +129,6 @@ echo json_encode([
     'vin' => null,
     'confidence' => 0.0,
     'check_digit_valid' => false,
+    'saved_image' => $tmpFileName,
     'error' => 'Ошибка выполнения модуля распознавания: ' . trim($output)
 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
