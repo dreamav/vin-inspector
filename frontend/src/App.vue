@@ -120,6 +120,8 @@ import HistorySidebar from './components/HistorySidebar.vue';
 import StatusAlert from './components/StatusAlert.vue';
 import OemCheckResult from './components/OemCheckResult.vue';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 export default {
   name: 'App',
   components: {
@@ -152,7 +154,7 @@ export default {
   methods: {
     async loadBrands() {
       try {
-        const res = await fetch('/api/get-brands.php');
+        const res = await fetch(`${API_BASE}/api/get-brands.php`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.brands) {
@@ -175,7 +177,7 @@ export default {
       this.demoNotice = false;
 
       try {
-        const res = await fetch(`/api/decode-vin.php?vin=${encodeURIComponent(vin)}`);
+        const res = await fetch(`${API_BASE}/api/decode-vin.php?vin=${encodeURIComponent(vin)}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -202,7 +204,7 @@ export default {
       this.oemResult = null;
 
       try {
-        const response = await fetch(`/api/check-vin.php?vin=${encodeURIComponent(vin)}&brand=${encodeURIComponent(brandId)}`, {
+        const response = await fetch(`${API_BASE}/api/check-vin.php?vin=${encodeURIComponent(vin)}&brand=${encodeURIComponent(brandId)}`, {
           headers: { 'Accept': 'application/json' }
         });
 
@@ -258,7 +260,7 @@ export default {
         });
 
         const response = await fetch(
-          `/api/check-oem.php?${queryParams.toString()}`,
+          `${API_BASE}/api/check-oem.php?${queryParams.toString()}`,
           { headers: { 'Accept': 'application/json' } }
         );
 

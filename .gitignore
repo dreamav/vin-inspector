@@ -6,6 +6,7 @@ vendor/
 # Production build
 dist/
 frontend/dist/
+build_ready/
 
 # Logs & temp
 *.log
