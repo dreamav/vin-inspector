@@ -553,6 +553,25 @@ export default {
 
 .vin-input {
   padding-right: 125px !important; /* Чтобы длинный текст никогда не наползал на кнопку [Скан] и 0/17 */
+  text-overflow: ellipsis;
+}
+
+.vin-input::placeholder {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .vin-input {
+    font-size: 1rem;
+    padding-left: 0.85rem;
+    padding-right: 125px !important;
+  }
+  .vin-input::placeholder {
+    font-size: 0.82rem;
+    letter-spacing: normal;
+  }
 }
 
 .input-wrapper.is-locked input {
