@@ -45,7 +45,9 @@ OCR_CONFUSIONS = {
     'S': '5', '5': 'S',
     'B': '8', '8': 'B',
     'G': '6', '6': 'G',
-    'D': '0',
+    'D': '0', '0': 'D',
+    'J': '1', '1': 'J',
+    'L': '4', '4': 'L',
     'U': 'V', 'V': 'U'
 }
 
@@ -121,10 +123,25 @@ def score_repair_candidate(cand: str, substitutions: List[int]) -> int:
     return score
 
 
+def can_substitute(idx: int, char: str) -> bool:
+    """
+    Checks if character at index can be substituted.
+    In positions 14-17 (0-indexed 13 to 16), characters are strictly numeric in passenger cars.
+    Never replace a digit with a letter in positions 14-17.
+    """
+    if char not in OCR_CONFUSIONS:
+        return False
+    replacement = OCR_CONFUSIONS[char]
+    if 13 <= idx <= 16:
+        if char.isdigit() and replacement.isalpha():
+            return False
+    return True
+
+
 def attempt_check_digit_repair(vin: str) -> Tuple[str, bool]:
     """
     If a 17-character candidate does not validate via check digit,
-    attempts to fix common optical OCR confusions (e.g. S<->5, Z<->2, B<->8, G<->6)
+    attempts to fix common optical OCR confusions (e.g. S<->5, Z<->2, B<->8, G<->6, J<->1, L<->4)
     guided by the mathematical check digit equation.
     """
     is_valid, _ = validate_vin_check_digit(vin)
@@ -135,7 +152,7 @@ def attempt_check_digit_repair(vin: str) -> Tuple[str, bool]:
     valid_candidates = []
     
     # In positions 13-16 (the last 4 digits of VIS), letters are virtually always digits in production vehicles
-    digit_fix = {'B': '8', 'Z': '2', 'S': '5', 'G': '6', 'D': '0'}
+    digit_fix = {'B': '8', 'Z': '2', 'S': '5', 'G': '6', 'D': '0', 'J': '1', 'L': '4'}
     for i in range(13, 17):
         if chars[i] in digit_fix:
             chars[i] = digit_fix[chars[i]]
@@ -145,8 +162,8 @@ def attempt_check_digit_repair(vin: str) -> Tuple[str, bool]:
     if is_valid:
         return candidate_pos, True
 
-    # Find ambiguous positions
-    ambig_indices = [i for i, c in enumerate(chars) if c in OCR_CONFUSIONS]
+    # Find ambiguous positions respecting the position 14-17 numeric rule
+    ambig_indices = [i for i, c in enumerate(chars) if can_substitute(i, c)]
     
     # 1 substitution
     for idx in ambig_indices:
@@ -230,10 +247,10 @@ def preprocess_image(image_path: str):
     Reads image safely and applies dynamic scaling and enhancement:
     - Scales down images larger than 1920px (for speed)
     - Scales up images smaller than 900px (to enhance small sticker text)
-    - Applies Grayscale, CLAHE contrast equalization, and unsharp masking
+    - Returns (img_bgr, img_gray, img_clahe, img_unsharp)
     """
     if not os.path.isfile(image_path):
-        return None, None, None
+        return None, None, None, None
 
     try:
         with open(image_path, 'rb') as f:
@@ -243,7 +260,7 @@ def preprocess_image(image_path: str):
         img = cv2.imread(image_path)
         
     if img is None:
-        return None, None, None
+        return None, None, None, None
 
     h, w = img.shape[:2]
     max_dim = max(h, w)
@@ -257,18 +274,18 @@ def preprocess_image(image_path: str):
         scale = 1200.0 / max_dim
         img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
 
-    # Grayscale
+    # Clean Grayscale (Pass 1 - best for clean printed stickers/plates)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Contrast Limited Adaptive Histogram Equalization (CLAHE)
+    # Contrast Limited Adaptive Histogram Equalization (CLAHE for Pass 2)
     clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
     gray_clahe = clahe.apply(gray)
     
-    # Unsharp mask for stamped relief on metal
+    # Unsharp mask for stamped relief on metal (Pass 2 fallback)
     gaussian = cv2.GaussianBlur(gray_clahe, (0, 0), 2.0)
     unsharp = cv2.addWeighted(gray_clahe, 1.5, gaussian, -0.5, 0)
 
-    return img, gray_clahe, unsharp
+    return img, gray, gray_clahe, unsharp
 
 
 def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
@@ -276,7 +293,7 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
     Finds and ranks all 17-character VIN candidates from OCR results:
     - Single block matches
     - Substrings within blocks
-    - Adjacent block combinations
+    - Adjacent block combinations (strictly same horizontal line, dy <= 15px)
     - Check digit calculation and guided repair
     """
     candidates = []
@@ -321,13 +338,29 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
                         'source': text
                     })
 
-    # 3. Concatenate adjacent blocks if needed
+    # 3. Concatenate adjacent blocks ONLY if they are strictly on the same horizontal line
     if len(ocr_results) >= 2:
         for i in range(len(ocr_results) - 1):
-            t1 = normalize_ocr_string(ocr_results[i][1])
-            t2 = normalize_ocr_string(ocr_results[i+1][1])
+            bbox1, raw_t1, conf1 = ocr_results[i]
+            bbox2, raw_t2, conf2 = ocr_results[i+1]
+            
+            # Check horizontal alignment and ordering
+            try:
+                y1 = sum(p[1] for p in bbox1) / 4.0
+                y2 = sum(p[1] for p in bbox2) / 4.0
+                x1 = sum(p[0] for p in bbox1) / 4.0
+                x2 = sum(p[0] for p in bbox2) / 4.0
+                
+                # Blocks must be on the same horizontal line (diff <= 15px) and ordered left to right
+                if abs(y1 - y2) > 15 or x2 <= x1:
+                    continue
+            except Exception:
+                continue
+
+            t1 = normalize_ocr_string(raw_t1)
+            t2 = normalize_ocr_string(raw_t2)
             combined = t1 + t2
-            avg_conf = (float(ocr_results[i][2]) + float(ocr_results[i+1][2])) / 2.0
+            avg_conf = (float(conf1) + float(conf2)) / 2.0
             
             if len(combined) == 17 and is_valid_vin_structure(combined):
                 fixed_vin, valid = attempt_check_digit_repair(combined)
@@ -338,7 +371,7 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
                     'confidence': avg_conf * 0.9,
                     'check_digit_valid': valid,
                     'score': score,
-                    'source': f"{ocr_results[i][1]} + {ocr_results[i+1][1]}"
+                    'source': f"{raw_t1} + {raw_t2}"
                 })
 
     return candidates
@@ -346,12 +379,14 @@ def extract_vin_candidates(ocr_results: List[Any]) -> List[Dict[str, Any]]:
 
 def recognize_vin_image(image_path: str) -> Dict[str, Any]:
     """
-    Main recognition execution function.
+    Main recognition execution function:
+    - Pass 1 (Primary): Clean Grayscale (fast 1.5–2s for crisp stickers). Returns immediately if valid VIN found.
+    - Pass 2 (Fallback): CLAHE + Unsharp mask (for stamped/embossed metal VINs).
     """
     start_time = time.time()
 
     # Preprocess
-    img_bgr, img_clahe, img_unsharp = preprocess_image(image_path)
+    img_bgr, img_gray, img_clahe, img_unsharp = preprocess_image(image_path)
     if img_bgr is None:
         return {
             "success": False,
@@ -366,35 +401,63 @@ def recognize_vin_image(image_path: str) -> Dict[str, Any]:
             }
         }
 
-    # Initialize EasyOCR
+    # Initialize EasyOCR reader
     import easyocr
     reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
-    # Pass 1: CLAHE contrast equalized image
-    ocr_results = reader.readtext(img_clahe)
-    candidates = extract_vin_candidates(ocr_results)
+    # =========================================================================
+    # PASS 1 (Быстрый путь): Чистый Grayscale
+    # Сохраняет естественную четкость шрифта на наклейках и шильдиках
+    # =========================================================================
+    ocr_results_gray = reader.readtext(img_gray)
+    candidates_gray = extract_vin_candidates(ocr_results_gray)
 
-    # Pass 2: Unsharp image fallback (for stamped metal)
-    if not candidates or not any(c['check_digit_valid'] for c in candidates):
+    # Если в Pass 1 найден валидный VIN с правильной контрольной цифрой — СРАЗУ возвращаем
+    valid_candidates_p1 = [c for c in candidates_gray if c['check_digit_valid']]
+    if valid_candidates_p1:
+        valid_candidates_p1.sort(key=lambda c: c['score'], reverse=True)
+        best = valid_candidates_p1[0]
+        elapsed = round(time.time() - start_time, 2)
+        raw_texts = [r[1] for r in ocr_results_gray]
+        return {
+            "success": True,
+            "vin": best['vin'],
+            "confidence": round(best['confidence'], 2),
+            "check_digit_valid": True,
+            "execution_time_sec": elapsed,
+            "details": {
+                "pass": "Pass 1 (Grayscale)",
+                "raw_detected": raw_texts,
+                "normalized_vin": best['vin'],
+                "match_source": best['source']
+            }
+        }
+
+    # =========================================================================
+    # PASS 2 (Резервный путь для тисненого/выбитого металла):
+    # CLAHE contrast equalization + Unsharp Mask
+    # =========================================================================
+    candidates = list(candidates_gray)
+    all_ocr_results = list(ocr_results_gray)
+
+    ocr_results_clahe = reader.readtext(img_clahe)
+    candidates_clahe = extract_vin_candidates(ocr_results_clahe)
+    candidates.extend(candidates_clahe)
+    all_ocr_results.extend(ocr_results_clahe)
+
+    # Если валидная контрольная цифра всё ещё не найдена — пробуем фильтр резкости Unsharp
+    if not any(c['check_digit_valid'] for c in candidates):
         ocr_results_unsharp = reader.readtext(img_unsharp)
         cand_unsharp = extract_vin_candidates(ocr_results_unsharp)
         if cand_unsharp:
             candidates.extend(cand_unsharp)
-            ocr_results.extend(ocr_results_unsharp)
-
-    # Pass 3: Original BGR fallback
-    if not candidates:
-        ocr_results_bgr = reader.readtext(img_bgr)
-        cand_bgr = extract_vin_candidates(ocr_results_bgr)
-        if cand_bgr:
-            candidates.extend(cand_bgr)
-            ocr_results.extend(ocr_results_bgr)
+            all_ocr_results.extend(ocr_results_unsharp)
 
     elapsed = round(time.time() - start_time, 2)
-    raw_texts = [r[1] for r in ocr_results]
+    raw_texts = [r[1] for r in all_ocr_results]
 
     if candidates:
-        # Sort by composite score (valid check digit, confidence, label proximity)
+        # Сортируем по суммарному скору (контрольная цифра, уверенность, метка)
         candidates.sort(key=lambda c: c['score'], reverse=True)
         best = candidates[0]
 
@@ -405,6 +468,7 @@ def recognize_vin_image(image_path: str) -> Dict[str, Any]:
             "check_digit_valid": best['check_digit_valid'],
             "execution_time_sec": elapsed,
             "details": {
+                "pass": "Pass 2 (CLAHE / Fallback)",
                 "raw_detected": raw_texts,
                 "normalized_vin": best['vin'],
                 "match_source": best['source']

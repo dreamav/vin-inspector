@@ -344,9 +344,9 @@ export default {
           // 2. Позиция рамки относительно реального изображения видео
           const boxXInDisplay = (box.left - videoRect.left) + offsetX;
           const boxYInDisplay = (box.top - videoRect.top) + offsetY;
-          // 3. Добавляем 15% запаса по бокам и 25% по высоте для гарантии захвата всех 17 знаков
-          const padX = (box.width * 0.15) * scale;
-          const padY = (box.height * 0.25) * scale;
+          // Минимальный 5% запас по краям, чтобы резать строго по видимой рамке
+          const padX = (box.width * 0.05) * scale;
+          const padY = (box.height * 0.05) * scale;
           cropX = Math.max(0, boxXInDisplay * scale - padX);
           cropY = Math.max(0, boxYInDisplay * scale - padY);
           cropWidth = Math.min(vW - cropX, box.width * scale + padX * 2);
@@ -580,12 +580,12 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 82%;
-  height: 36%;
-  border: 1px dashed rgba(59, 130, 246, 0.4);
+  width: 86%;
+  height: 20%; /* Узкая полоска ровно под номер */
+  border: 1px dashed rgba(59, 130, 246, 0.5);
   border-radius: 8px;
   pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(3, 7, 18, 0.45);
+  box-shadow: 0 0 0 9999px rgba(3, 7, 18, 0.55);
 }
 
 .reticle-corner {
