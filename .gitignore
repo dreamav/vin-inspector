@@ -16,6 +16,9 @@ yarn-debug.log*
 
 # Executables & archives
 *.phar
+cloudflared.exe
+*.exe
+*.pem
 
 # Environment files
 .env

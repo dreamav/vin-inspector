@@ -25,6 +25,10 @@
               {{ statusBadgeLabel }}
             </span>
             <span class="oem-code-tag">OEM: {{ result.oem }}</span>
+            <span v-if="result.isReplaced && result.replacedBy" class="oem-replaced-badge" title="Заменена производителем">
+              <span class="replaced-badge-icon">🔄</span>
+              <span>Replaced Part: <strong>{{ result.replacedBy }}</strong></span>
+            </span>
           </div>
 
           <!-- Результат проверки совместимости -->
@@ -44,6 +48,28 @@
             <button v-if="hasOptions" type="button" class="btn-change-option" @click="openModal" title="Выбрать другую комплектацию">
               (изменить)
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Баннер официальной замены детали производителем (Replaced Part) -->
+      <div v-if="result.isReplaced && result.replacedBy" class="replaced-alert-card">
+        <div class="replaced-alert-icon">🔄</div>
+        <div class="replaced-alert-body">
+          <div class="replaced-alert-header">
+            <h4>Деталь заменена производителем (Replaced Part)</h4>
+            <span class="replaced-status-pill">This part fits ✓</span>
+          </div>
+          <p class="replaced-alert-desc">
+            Исходный артикул <strong>{{ result.originalOem || result.oem }}</strong> заменен производителем на актуальный номер 
+            <strong class="replaced-code-highlight">{{ result.replacedBy }}</strong>.
+            Проверка совместимости и список автомобилей подтверждают, что деталь <strong>{{ result.replacedBy }}</strong> подходит для выбранного автомобиля.
+          </p>
+          <div class="replaced-alert-links" v-if="result.partUrl">
+            <a :href="result.partUrl" target="_blank" rel="noopener noreferrer" class="link-replaced-catalog">
+              <span>Открыть деталь замены {{ result.replacedBy }} на {{ currentHost }}</span>
+              <span class="btn-arrow">↗</span>
+            </a>
           </div>
         </div>
       </div>
@@ -68,6 +94,14 @@
 
       <!-- Дополнительная информация о детали и авто -->
       <div class="result-details-grid">
+        <div v-if="result.isReplaced && result.replacedBy" class="detail-row row-replaced">
+          <span class="detail-label">Замена производителем:</span>
+          <span class="detail-value replaced-val">
+            <strong class="replaced-val-code">{{ result.replacedBy }}</strong> 
+            <span class="replaced-val-hint">(Replaced Part)</span>
+          </span>
+        </div>
+
         <div v-if="result.partTitle" class="detail-row">
           <span class="detail-label">Наименование детали:</span>
           <span class="detail-value part-title">{{ result.partTitle }}</span>
@@ -99,9 +133,19 @@
           <div class="fitment-title-wrap">
             <span class="fitment-icon">📋</span>
             <div>
-              <h3 class="fitment-title">Список совместимых автомобилей</h3>
+              <h3 class="fitment-title">
+                Список совместимых автомобилей
+                <span v-if="result.isReplaced && result.replacedBy" class="fitment-replaced-subtag">
+                  (по замене {{ result.replacedBy }})
+                </span>
+              </h3>
               <p class="fitment-subtitle">
-                Модели и комплектации, на которые устанавливается данная деталь
+                <span v-if="result.isReplaced && result.replacedBy">
+                  Модели и комплектации, на которые устанавливается актуальная деталь замены <strong>{{ result.replacedBy }}</strong>
+                </span>
+                <span v-else>
+                  Модели и комплектации, на которые устанавливается данная деталь
+                </span>
               </p>
             </div>
           </div>
@@ -486,6 +530,23 @@ export default {
       const vInfo = (this.result && this.result.vehicleInfo ? this.result.vehicleInfo : (this.vehicle && this.vehicle.title ? this.vehicle.title : '')).toLowerCase();
       if (!vInfo) return false;
       const ymm = (item.yearMakeModel || '').toLowerCase();
+
+      // Поддержка диапазонов годов выпуска (например 2019-2025 для авто 2021)
+      const yearMatch = vInfo.match(/\b(19\d\d|20\d\d)\b/);
+      if (yearMatch) {
+        const targetYear = parseInt(yearMatch[1], 10);
+        const rangeMatch = ymm.match(/\b(19\d\d|20\d\d)\s*-\s*(19\d\d|20\d\d)\b/);
+        if (rangeMatch) {
+          const startYear = parseInt(rangeMatch[1], 10);
+          const endYear = parseInt(rangeMatch[2], 10);
+          if (targetYear >= startYear && targetYear <= endYear) {
+            const cleanInfo = vInfo.replace(yearMatch[0], '');
+            const words = cleanInfo.match(/[a-z0-9]{3,}/gi) || [];
+            const matches = words.filter(w => ymm.includes(w.toLowerCase()));
+            if (matches.length >= 1) return true;
+          }
+        }
+      }
       
       const words = vInfo.match(/[a-z0-9]{3,}/gi) || [];
       if (!words.length) return false;
@@ -686,6 +747,225 @@ export default {
 .status-partial .confirm-text-value,
 .status-unknown .confirm-text-value {
   color: #fbbf24;
+}
+
+/* Replaced Part Badge & Banner */
+.oem-replaced-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.15);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.2);
+  letter-spacing: 0.02em;
+}
+
+.replaced-badge-icon {
+  font-size: 0.95rem;
+  display: inline-block;
+  animation: rotateSlow 10s linear infinite;
+}
+
+@keyframes rotateSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.replaced-alert-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--radius-sm, 10px);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.replaced-alert-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #38bdf8, #34d399);
+}
+
+.replaced-alert-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.replaced-alert-body {
+  flex: 1;
+}
+
+.replaced-alert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.45rem;
+}
+
+.replaced-alert-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f0f9ff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.replaced-status-pill {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.replaced-alert-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 0 0 0.75rem 0;
+}
+
+.replaced-code-highlight {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95rem;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.18);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.replaced-alert-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.link-replaced-catalog {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #38bdf8;
+  text-decoration: none;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.link-replaced-catalog:hover {
+  background: rgba(14, 165, 233, 0.25);
+  color: #7dd3fc;
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: translateY(-1px);
+}
+
+.row-replaced {
+  background: rgba(14, 165, 233, 0.08);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.replaced-val-code {
+  font-family: var(--font-mono, monospace);
+  color: #38bdf8;
+  font-size: 1rem;
+}
+
+.replaced-val-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-left: 0.4rem;
+  font-weight: normal;
+}
+
+.fitment-replaced-subtag {
+  font-size: 0.85rem;
+  color: #38bdf8;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+/* Баннер выбора опций */
+.options-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-sm, 10px);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.options-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.options-alert-icon {
+  font-size: 1.8rem;
+}
+
+.options-alert-text h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fef3c7;
+  margin: 0 0 0.2rem 0;
+}
+
+.options-alert-text p {
+  font-size: 0.82rem;
+  color: #d1d5db;
+  margin: 0;
+}
+
+.btn-select-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-select-options:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 /* Детали */
