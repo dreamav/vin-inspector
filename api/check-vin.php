@@ -109,7 +109,7 @@ $rawBlock = '';
 if (preg_match('/<div[^>]*class=["\'][^"\']*category-main-title[^"\']*["\'][^>]*>(.*?)<\/div>/is', $html, $divMatch)) {
     $rawBlock = $divMatch[0];
     if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $divMatch[1], $h1Match)) {
-        $carTitle = trim(strip_tags($h1Match[1]));
+        $carTitle = html_entity_decode(trim(strip_tags($h1Match[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 }
 
