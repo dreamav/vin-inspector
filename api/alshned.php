@@ -85,13 +85,13 @@ function searchAlshnedAuto($oem) {
 
                     $allProducts[$prodId] = [
                         'id' => $prodId,
-                        'title' => $item['title'] ?? '',
+                        'title' => html_entity_decode($item['title'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                         'price' => $price,
                         'priceFormatted' => $priceFormatted,
                         'image' => $imgUrl,
                         'url' => $prodUrl,
                         'available' => !empty($item['available']),
-                        'vendor' => $item['vendor'] ?? ''
+                        'vendor' => html_entity_decode($item['vendor'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8')
                     ];
                 }
                 break;

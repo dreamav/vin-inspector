@@ -170,7 +170,7 @@ function fetchPartDetails($siteUrl, $siteCode, $targetOem, $vin, $categoryUrl = 
 
     if (preg_match('/<div[^>]*class=["\'][^"\']*pn-check-confirm-text[^"\']*["\'][^>]*>(.*?)<\/div>/is', $partHtml, $textMatch)) {
         $confirmBlock = $textMatch[0];
-        $confirmText = trim(strip_tags($textMatch[1]));
+        $confirmText = html_entity_decode(trim(strip_tags($textMatch[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     if (preg_match('/<div[^>]*class=["\'][^"\']*pn-check\s+[^"\']*["\'][^>]*>.*?<\/div>\s*<\/div>/is', $partHtml, $checkBlockMatch)) {
@@ -186,11 +186,11 @@ function fetchPartDetails($siteUrl, $siteCode, $targetOem, $vin, $categoryUrl = 
     }
 
     if (preg_match('/<div[^>]*class=["\'][^"\']*pn-check-vehicle-info[^"\']*["\'][^>]*>(.*?)<\/div>/is', $partHtml, $vInfoMatch)) {
-        $vehicleInfo = trim(preg_replace('/\s+/', ' ', strip_tags($vInfoMatch[1])));
+        $vehicleInfo = html_entity_decode(trim(preg_replace('/\s+/', ' ', strip_tags($vInfoMatch[1]))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $partHtml, $h1Match)) {
-        $partTitle = trim(preg_replace('/\s+/', ' ', strip_tags($h1Match[1])));
+        $partTitle = html_entity_decode(trim(preg_replace('/\s+/', ' ', strip_tags($h1Match[1]))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     // Поиск Replaced By (номер детали, на которую заменена текущая)
@@ -333,7 +333,7 @@ function fetchPartDetails($siteUrl, $siteCode, $targetOem, $vin, $categoryUrl = 
         foreach ($trMatches[1] as $tr) {
             if (preg_match_all('/<td[^>]*>(.*?)<\/td>/is', $tr, $tdMatches)) {
                 $row = array_map(function($td) {
-                    return trim(preg_replace('/\s+/', ' ', strip_tags($td)));
+                    return html_entity_decode(trim(preg_replace('/\s+/', ' ', strip_tags($td))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }, $tdMatches[1]);
                 if (!empty($row)) {
                     $fitmentVehicles[] = [
@@ -462,13 +462,13 @@ echo json_encode([
     'originalOem' => $originalOem,
     'originalStatus' => $originalStatus,
     'originalConfirmText' => $originalConfirmText,
-    'originalPartTitle' => $originalPartTitle,
+    'originalPartTitle' => html_entity_decode($originalPartTitle ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
     'originalPartUrl' => $originalPartUrl,
     'needsOptions' => $partData['needsOptions'],
     'options' => $partData['options'],
     'selectedOption' => $partData['selectedOption'],
     'decodeVehicleInfo' => $partData['decodeVehicleInfo'],
-    'partTitle' => $partData['partTitle'],
+    'partTitle' => html_entity_decode($partData['partTitle'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
     'vehicleInfo' => $partData['vehicleInfo'],
     'categoryUrl' => $categoryUrl ?: "{$siteUrl}/page_product/category?vin=" . $vin,
     'partUrl' => $partData['fullPartUrl'],
