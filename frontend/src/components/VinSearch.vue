@@ -43,6 +43,7 @@
               id="vin-input"
               ref="vinInput"
               type="text"
+              class="vin-input"
               v-model="vinInput"
               @input="onVinInput"
               placeholder="Например: 5LMJJ2J54CEL07288 или 3PCAJ5M34KF147171"
@@ -511,6 +512,27 @@ export default {
   outline: none;
   transition: all 0.25s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.vin-input {
+  text-overflow: ellipsis;
+}
+
+.vin-input::placeholder {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .vin-input {
+    font-size: 1rem;
+    padding-left: 0.85rem;
+  }
+  .vin-input::placeholder {
+    font-size: 0.82rem;
+    letter-spacing: normal;
+  }
 }
 
 .input-wrapper.is-locked input {
