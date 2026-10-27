@@ -29,3 +29,7 @@ cloudflared.exe
 .idea/
 .DS_Store
 Thumbs.db
+
+# Feature specific local data
+ocr/
+
